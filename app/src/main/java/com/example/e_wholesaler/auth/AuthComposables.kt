@@ -1,17 +1,27 @@
 package com.example.e_wholesaler.auth
 
+import android.widget.Toast
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.rememberScrollableState
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Lock
@@ -19,6 +29,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -26,15 +37,20 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -46,6 +62,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.example.e_wholesaler.auth.dtos.Gender
+import com.example.e_wholesaler.auth.dtos.UserType
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
+import org.koin.core.qualifier.named
+import org.parimal.auth.AuthClient
+import org.parimal.auth.dtos.LoginRequest
+import org.parimal.auth.dtos.SignUpRequest
 
 
 @Preview(showBackground = true)
@@ -57,9 +81,12 @@ fun SignUpScreen(navCon: NavHostController = rememberNavController()) {
     var city by remember { mutableStateOf("") }
     var selectedState by remember { mutableStateOf("Select state") }
     var password by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf("") }
-    var userType by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf(Gender.MALE) }
+    var userType by remember { mutableStateOf(UserType.OWNER) }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    val authClient: AuthClient = koinInject(named("auth-client"))
+    val scope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
@@ -67,70 +94,106 @@ fun SignUpScreen(navCon: NavHostController = rememberNavController()) {
             .background(Color(0xFFEDF3FF)),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Spacer(modifier = Modifier.height(24.dp))
-
-            Card(
-                shape = RoundedCornerShape(20.dp),
-//                elevation = 10.dp,
-                modifier = Modifier.padding(horizontal = 24.dp)
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .fillMaxSize()
             ) {
-                Column(
-                    modifier = Modifier.padding(28.dp)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    colors = CardDefaults.cardColors(Color.White)
                 ) {
-                    Text(
-                        text = "Sign Up",
-                        style = TextStyle(
-                            fontSize = 32.sp,
-                            color = Color(0xFF1D4ED8),
-                            fontWeight = FontWeight.Bold,
-                        ),
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
 
-                    Text("Create your account", fontSize = 18.sp, modifier = Modifier.align(
-                        Alignment.CenterHorizontally))
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    CustomTextField(label = "Full Name", value = fullName, onValueChange = { fullName = it })
-                    Spacer(modifier = Modifier.height(5.dp))
-
-                    GenderSelection(gender) { gender = it }
-                    Spacer(modifier = Modifier.height(5.dp))
-
-                    CustomTextField(label = "Mobile Number", value = mobileNumber, onValueChange = { mobileNumber = it }, keyboardType = KeyboardType.Phone)
-                    Spacer(modifier = Modifier.height(5.dp))
-
-                    CustomTextField(label = "Address", value = address, onValueChange = { address = it })
-                    Spacer(modifier = Modifier.height(5.dp))
-
-                    CustomTextField(label = "City", value = city, onValueChange = { city = it })
-                    Spacer(modifier = Modifier.height(5.dp))
-
-                    DropdownMenuField(selectedState, listOf(
-                        "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
-                        "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand",
-                        "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
-                        "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab",
-                        "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura",
-                        "Uttar Pradesh", "Uttarakhand", "West Bengal"
-                    )) { selectedState = it }
-                    Spacer(modifier = Modifier.height(5.dp))
-
-                    PasswordField(password, passwordVisible) { password = it }
-                    Spacer(modifier = Modifier.height(5.dp))
-
-                    UserTypeSelection(userType) { userType = it }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = { /* Handle Sign Up */ },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        colors = ButtonDefaults.buttonColors(Color(0xFF1D4ED8)),
-                        shape = RoundedCornerShape(14.dp)
+                    Column(
+                        modifier = Modifier
+                            .padding(28.dp)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()) // Enables scrolling
                     ) {
-                        Text("Sign Up", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Sign Up",
+                            style = TextStyle(
+                                fontSize = 32.sp,
+                                color = Color(0xFF1D4ED8),
+                                fontWeight = FontWeight.Bold,
+                            ),
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Text("Create your account", fontSize = 18.sp, modifier = Modifier.align(
+                            Alignment.CenterHorizontally))
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        CustomTextField(label = "Full Name", value = fullName, onValueChange = { fullName = it })
+                        Spacer(modifier = Modifier.height(5.dp))
+
+                        GenderSelection(gender) { gender = it }
+                        Spacer(modifier = Modifier.height(5.dp))
+
+                        CustomTextField(label = "Mobile Number", value = mobileNumber, onValueChange = { mobileNumber = it }, keyboardType = KeyboardType.Phone)
+                        Spacer(modifier = Modifier.height(5.dp))
+
+                        CustomTextField(label = "Address", value = address, onValueChange = { address = it })
+                        Spacer(modifier = Modifier.height(5.dp))
+
+                        CustomTextField(label = "City", value = city, onValueChange = { city = it })
+                        Spacer(modifier = Modifier.height(5.dp))
+
+                        DropdownMenuField(selectedState, listOf(
+                            "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+                            "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand",
+                            "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
+                            "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab",
+                            "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura",
+                            "Uttar Pradesh", "Uttarakhand", "West Bengal"
+                        )) { selectedState = it }
+                        Spacer(modifier = Modifier.height(5.dp))
+
+                        PasswordField(password, passwordVisible) { password = it }
+                        Spacer(modifier = Modifier.height(5.dp))
+
+                        UserTypeSelection(userType) { userType = it }
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        val context = LocalContext.current.applicationContext
+                        Button(
+                            onClick = {
+                                if(fullName.isBlank() || mobileNumber.isBlank() || address.isBlank() || city.isBlank() || selectedState.isBlank() || password.isBlank()) {
+                                    Toast.makeText(context,"Please fill all the fields correctly!", Toast.LENGTH_SHORT).show()
+                                }
+                                else {
+                                    scope.launch {
+                                        authClient.signUp(
+                                            SignUpRequest(
+                                                username = mobileNumber,
+                                                password = password,
+                                                userType = userType,
+                                                name = fullName,
+                                                gender = gender,
+                                                mobNo = mobileNumber,
+                                                address = address,
+                                                city = city,
+                                                state = selectedState
+                                            )
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(Color(0xFF1D4ED8)),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Text("Sign Up", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -154,26 +217,26 @@ fun PasswordField(value: String, isVisible: Boolean, onValueChange: (String) -> 
 }
 
 @Composable
-fun GenderSelection(selectedGender: String, onGenderSelected: (String) -> Unit) {
+fun GenderSelection(selectedGender: Gender, onGenderSelected: (Gender) -> Unit) {
     Text("Gender", fontSize = 16.sp, color = Color.Black, fontWeight = FontWeight.Bold)
     Row {
-        listOf("Male", "Female", "Other").forEach { gender ->
+        listOf(Gender.MALE, Gender.FEMALE).forEach { gender ->
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
                 RadioButton(selected = selectedGender == gender, onClick = { onGenderSelected(gender) })
-                Text(gender, fontSize = 14.sp)
+                Text(gender.toString(), fontSize = 14.sp)
             }
         }
     }
 }
 
 @Composable
-fun UserTypeSelection(selectedUserType: String, onUserTypeSelected: (String) -> Unit) {
+fun UserTypeSelection(selectedUserType: UserType, onUserTypeSelected: (UserType) -> Unit) {
     Text("User Type", fontSize = 16.sp, color = Color.Black, fontWeight = FontWeight.Bold)
     Row {
-        listOf("Owner", "Customer").forEach { userType ->
+        listOf(UserType.OWNER, UserType.CUSTOMER).forEach { userType ->
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
                 RadioButton(selected = selectedUserType == userType, onClick = { onUserTypeSelected(userType) })
-                Text(userType, fontSize = 16.sp)
+                Text(userType.toString(), fontSize = 16.sp)
             }
         }
     }
@@ -185,18 +248,15 @@ fun CustomTextField(label: String, value: String, onValueChange: (String) -> Uni
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth()
-            .height(40.dp),
+        modifier = Modifier.fillMaxWidth(),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         shape = RoundedCornerShape(12.dp),
     )
     Spacer(modifier = Modifier.height(10.dp))
 }
 
-
-@Preview(showBackground = true)
 @Composable
-fun DropdownMenuField(selectedItem: String? = null, items: List<String> = emptyList(), onItemSelected: (String) -> Unit = null!!) {
+fun DropdownMenuField(selectedItem: String, items: List<String>, onItemSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Column {
         Text("State", fontSize = 16.sp, color = Color.Black, fontWeight = FontWeight.Bold)
@@ -231,11 +291,14 @@ fun DropdownMenuField(selectedItem: String? = null, items: List<String> = emptyL
 }
 
 
-@Preview
+@Preview(showBackground = true)
 @Composable
 fun LoginScreen(navCon: NavHostController = rememberNavController()) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    val authClient: AuthClient = koinInject(named("auth-client"))
+    val scope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
@@ -289,11 +352,16 @@ fun LoginScreen(navCon: NavHostController = rememberNavController()) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(Color.White, shape = RoundedCornerShape(12.dp)),
-//                        colors = TextFieldDefaults.outlinedTextFieldColors(
-//                            backgroundColor = Color.White,
-//                            focusedBorderColor = Color.LightGray,
-//                            unfocusedBorderColor = Color.Gray
-//                        )
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            disabledContainerColor = Color.White,
+                            errorContainerColor = Color.White,
+                            focusedIndicatorColor = Color.LightGray,
+                            unfocusedIndicatorColor = Color.Gray,
+                            disabledIndicatorColor = Color.Gray,
+                            errorIndicatorColor = Color.Red
+                        )
                     )
                     Spacer(modifier = Modifier.height(25.dp))
 
@@ -314,17 +382,29 @@ fun LoginScreen(navCon: NavHostController = rememberNavController()) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(Color.White, shape = RoundedCornerShape(12.dp)), // Rounded Corners
-//                        colors = TextFieldDefaults.outlinedTextFieldColors(
-//                            backgroundColor = Color.White,
-//                            focusedBorderColor = Color.LightGray,
-//                            unfocusedBorderColor = Color.Gray
-//                        )
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            disabledContainerColor = Color.White,
+                            errorContainerColor = Color.White,
+                            focusedIndicatorColor = Color.LightGray,
+                            unfocusedIndicatorColor = Color.Gray,
+                            disabledIndicatorColor = Color.Gray,
+                            errorIndicatorColor = Color.Red
+                        )
                     )
                     Spacer(modifier = Modifier.height(25.dp))
 
+
                     // Login Button
                     Button(
-                        onClick = { /* Handle Login */ },
+                        onClick = {
+                            scope.launch {
+                                authClient.login(
+                                    LoginRequest(username, password)
+                                )
+                            }
+                        },
                         colors = ButtonDefaults.buttonColors(Color(0xD8007AFF)),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -342,7 +422,9 @@ fun LoginScreen(navCon: NavHostController = rememberNavController()) {
                             "Sign up",
                             color = Color(0xFF007AFF),
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.clickable { /* Navigate to Sign Up */ }
+                            modifier = Modifier.clickable {
+                                navCon.navigate("SignUpScreen")
+                            }
                         )
                     }
                 }

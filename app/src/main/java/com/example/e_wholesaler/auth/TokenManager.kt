@@ -82,7 +82,7 @@ class TokenManager(
         dataStore.edit { pref ->
             pref[ACCESS_TOKEN_KEY] = data.accessToken
             pref[REFRESH_TOKEN_KEY] = data.refreshToken
-            pref[USER_TYPE_KEY] = data.userType
+            pref[USER_TYPE_KEY] = data.userType.toString()
         }
     }
 

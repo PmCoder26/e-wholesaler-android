@@ -15,15 +15,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navCon = rememberNavController()
 
-            NavHost(navController = navCon, startDestination = "SignUpScreen") {
-                composable("SignUpScreen") {
-                    SignUpScreen(navCon)
-                }
-
+            NavHost(navController = navCon, startDestination = "LoginScreen") {
                 composable("LoginScreen") {
                     LoginScreen(navCon)
                 }
 
+                composable("SignUpScreen") {
+                    SignUpScreen(navCon)
+                }
             }
         }
     }
