@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.e_wholesaler.auth.dtos.UserType
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.post
@@ -36,14 +37,15 @@ class TokenManager(
     private val USER_TYPE_KEY = stringPreferencesKey("user_type")
     private var accessToken = MutableStateFlow<String?>(null)
     private var refreshToken = MutableStateFlow<String?>(null)
-    private var userType = MutableStateFlow<String?>(null)
+    private var userType = MutableStateFlow<UserType?>(null)
 
     private var _state = MutableStateFlow(TokenState(accessToken.value, refreshToken.value, userType.value))
-    val tokenState =
-        combine(accessToken, refreshToken, _state) { accessToken, refreshToken, _state ->
+    private val tokenState =
+        combine(accessToken, refreshToken, userType, _state) { accessToken, refreshToken, userType, _state ->
             _state.copy(
                 accessToken = accessToken,
-                refreshToken = refreshToken
+                refreshToken = refreshToken,
+                userType = userType
             )
         }.stateIn(
             viewModelScope,
@@ -67,7 +69,11 @@ class TokenManager(
                     refresh
                 }
                 userType.update {
-                    type
+                    var tempType: UserType = UserType.NONE
+                    type?.let {
+                        tempType = enumValueOf(it)
+                    }
+                    tempType
                 }
 
                 _state.update {

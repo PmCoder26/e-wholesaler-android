@@ -75,5 +75,8 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
 
+    // Worker configs.
+    implementation(libs.androidx.work.runtime.ktx)
+
 
 }

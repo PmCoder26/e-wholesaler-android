@@ -7,4 +7,5 @@ enum class UserType {
     OWNER,
     WORKER,
     CUSTOMER,
+    NONE
 }

@@ -33,17 +33,14 @@ class AuthClient(
             println("SignUp error: ${e.message}")
             null
         }
-        response?.data?.let { data ->
-            println("SignUp response: $data")
-            return true
-        }
         response?.error?.let { error ->
             println("SignUp response error: ${error.message}")
+            return false
         }
-        return false
+        return true
     }
 
-    suspend fun login(loginRequest: LoginRequest) {
+    suspend fun login(loginRequest: LoginRequest): Boolean {
         val response = try{
             httpClient!!.post(
                 urlString = "http://$HOST_URL:8090/api/v1/users/auth/login"
@@ -55,23 +52,24 @@ class AuthClient(
             println("Login error: ${e.message}")
             null
         }
-        println(response!!.data.toString())
         response?.data?.let { data ->
             tokenManager?.saveTokens(data)
+            return true
         }
         response?.error?.let { error ->
             println("Login response error: ${error.message}")
         }
+        return false
     }
-
-    fun checkTokens(): Boolean {
-        val tokenState = tokenManager?.tokenState2?.value
-        return tokenState?.accessToken != null && tokenState.refreshToken != null
-    }
-
-    suspend fun logout() {
-        tokenManager?.clearTokens()
-    }
+//
+//    fun checkTokens(): Boolean {
+//        val tokenState = tokenManager?.tokenState2?.value
+//        return tokenState?.accessToken != null && tokenState.refreshToken != null
+//    }
+//
+//    suspend fun logout() {
+//        tokenManager?.clearTokens()
+//    }
 
 
 }

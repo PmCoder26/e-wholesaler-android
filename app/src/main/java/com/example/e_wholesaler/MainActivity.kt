@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.e_wholesaler.auth.LoginScreen
 import com.example.e_wholesaler.auth.SignUpScreen
+import com.example.e_wholesaler.main.users.owner.ui.OwnerScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,6 +23,10 @@ class MainActivity : ComponentActivity() {
 
                 composable("SignUpScreen") {
                     SignUpScreen(navCon)
+                }
+
+                composable("OwnerScreen") {
+                    OwnerScreen()
                 }
             }
         }

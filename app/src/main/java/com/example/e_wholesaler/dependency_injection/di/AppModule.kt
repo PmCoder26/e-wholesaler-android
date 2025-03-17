@@ -8,7 +8,6 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import org.example.project.ktor_client.createHttpClient
 import org.koin.android.ext.koin.androidContext
-import org.koin.compose.koinInject
 import org.koin.core.module.Module
 import org.koin.core.qualifier.named
 import org.koin.dsl.module

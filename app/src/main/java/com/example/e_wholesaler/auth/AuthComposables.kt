@@ -67,7 +67,9 @@ import com.example.e_wholesaler.auth.dtos.UserType
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.core.qualifier.named
+import org.koin.java.KoinJavaComponent.inject
 import org.parimal.auth.AuthClient
+import org.parimal.auth.TokenManager
 import org.parimal.auth.dtos.LoginRequest
 import org.parimal.auth.dtos.SignUpRequest
 
@@ -172,7 +174,7 @@ fun SignUpScreen(navCon: NavHostController = rememberNavController()) {
                                 }
                                 else {
                                     scope.launch {
-                                        authClient.signUp(
+                                        val isSignedUp = authClient.signUp(
                                             SignUpRequest(
                                                 username = mobileNumber,
                                                 password = password,
@@ -185,6 +187,10 @@ fun SignUpScreen(navCon: NavHostController = rememberNavController()) {
                                                 state = selectedState
                                             )
                                         )
+                                        if(isSignedUp) {
+                                            navCon.popBackStack(route = "LoginScreen", inclusive = false)
+                                        }
+                                        else Toast.makeText(context, "Signup failed!", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             },
@@ -266,7 +272,7 @@ fun DropdownMenuField(selectedItem: String, items: List<String>, onItemSelected:
                 .clickable { expanded = true }
                 .padding(16.dp)
         ) {
-            Text(selectedItem!!, fontSize = 16.sp)
+            Text(selectedItem, fontSize = 16.sp)
             Icon(
                 Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.align(
                     Alignment.CenterEnd
@@ -299,6 +305,7 @@ fun LoginScreen(navCon: NavHostController = rememberNavController()) {
 
     val authClient: AuthClient = koinInject(named("auth-client"))
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Box(
         modifier = Modifier
@@ -400,9 +407,23 @@ fun LoginScreen(navCon: NavHostController = rememberNavController()) {
                     Button(
                         onClick = {
                             scope.launch {
-                                authClient.login(
+                                val isLoggedIn = authClient.login(
                                     LoginRequest(username, password)
                                 )
+                                if(isLoggedIn) {
+                                    val tokenManager by inject<TokenManager>(TokenManager::class.java, named("token-manager"))
+                                    if(tokenManager.tokensCheck()) {
+                                        val userType = tokenManager.tokenState2.value.userType
+                                        when(userType) {
+                                            UserType.OWNER -> navCon.navigate("OwnerScreen")
+                                            UserType.WORKER -> TODO()
+                                            UserType.CUSTOMER -> TODO()
+                                            UserType.NONE -> TODO()
+                                            null -> TODO()
+                                        }
+                                    }
+                                }
+                                else Toast.makeText(context, "Login failed!", Toast.LENGTH_SHORT).show()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(Color(0xD8007AFF)),
