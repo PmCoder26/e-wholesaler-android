@@ -8,5 +8,6 @@ import kotlinx.serialization.Serializable
 data class LoginResponse(
     val accessToken: String,
     val refreshToken: String,
-    val userType: UserType
+    val userType: UserType,
+    val userTypeId: Long
 )

@@ -1,9 +1,10 @@
 package org.parimal.auth
 
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -29,28 +30,41 @@ import org.parimal.auth.dtos.Tokens
 
 class TokenManager(
     private var dataStore: DataStore<Preferences>,
-    private val httpClient: HttpClient?
+    private val httpClient: HttpClient
 ) : ViewModel() {
 
     private val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
     private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
     private val USER_TYPE_KEY = stringPreferencesKey("user_type")
+    private val USER_TYPE_ID_KEY = longPreferencesKey("user_type_id")       // user-type wise(owner, customer, worker) id.
     private var accessToken = MutableStateFlow<String?>(null)
     private var refreshToken = MutableStateFlow<String?>(null)
     private var userType = MutableStateFlow<UserType?>(null)
+    private var userTypeId = MutableStateFlow<Long?>(null)
 
-    private var _state = MutableStateFlow(TokenState(accessToken.value, refreshToken.value, userType.value))
+    private var _state = MutableStateFlow(TokenState(
+        accessToken.value,
+        refreshToken.value,
+        userType.value,
+        userTypeId.value
+    ))
+
     private val tokenState =
-        combine(accessToken, refreshToken, userType, _state) { accessToken, refreshToken, userType, _state ->
+        combine(
+            accessToken, refreshToken, userType, userTypeId, _state
+        ) { accessToken, refreshToken, userType, userTypeId, _state ->
             _state.copy(
                 accessToken = accessToken,
                 refreshToken = refreshToken,
-                userType = userType
+                userType = userType,
+                userTypeId = userTypeId
             )
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(),
-            TokenState(accessToken.value, refreshToken.value, userType.value)
+            TokenState(
+                accessToken.value, refreshToken.value, userType.value, userTypeId.value
+            )
         )
     val tokenState2 = _state
 
@@ -61,6 +75,7 @@ class TokenManager(
                 val access = pref[ACCESS_TOKEN_KEY]
                 val refresh = pref[REFRESH_TOKEN_KEY]
                 val type = pref[USER_TYPE_KEY]
+                val typeId = pref[USER_TYPE_ID_KEY]
 
                 accessToken.update {
                     access
@@ -75,10 +90,15 @@ class TokenManager(
                     }
                     tempType
                 }
+                userTypeId.update {
+                    typeId
+                }
 
                 _state.update {
                     println("Tokens updated")
-                    TokenState(accessToken.value, refreshToken.value, userType.value)
+                    TokenState(
+                        accessToken.value, refreshToken.value, userType.value, userTypeId.value
+                    )
                 }
             }
         }
@@ -89,12 +109,13 @@ class TokenManager(
             pref[ACCESS_TOKEN_KEY] = data.accessToken
             pref[REFRESH_TOKEN_KEY] = data.refreshToken
             pref[USER_TYPE_KEY] = data.userType.toString()
+            pref[USER_TYPE_ID_KEY] = data.userTypeId
         }
     }
 
     suspend fun refreshTokens() {
         val response = try {
-            httpClient!!.post(
+            httpClient.post(
                 urlString = "http://$HOST_URL/auth/refresh-tokens"
             ) {
                 headers.remove("Authorization")
@@ -116,7 +137,8 @@ class TokenManager(
                 LoginResponse(
                     accessToken = data.accessToken,
                     refreshToken = data.refreshToken,
-                    userType = data.userType
+                    userType = data.userType,
+                    userTypeId = data.userTypeId
                 )
             )
         }
