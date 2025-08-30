@@ -18,6 +18,7 @@ import com.example.e_wholesaler.auth.dtos.UserType
 import com.example.e_wholesaler.main.users.owner.ui.OwnerScreen
 import org.koin.android.ext.android.inject
 import org.koin.core.qualifier.named
+import org.parimal.auth.AuthClient
 import org.parimal.auth.TokenManager
 import org.parimal.auth.dtos.TokenState
 
@@ -25,6 +26,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val tokenManager by inject<TokenManager>(named("token-manager"))
+        val authClient by inject<AuthClient>(named("auth-client"))
 
         setContent {
             val navCon = rememberNavController()
@@ -51,11 +53,13 @@ class MainActivity : ComponentActivity() {
                             null -> TODO()
                         }
                     } else if(!isLoggedIn){
-                        LoginScreen(navCon)
+                        LoginScreen(navCon, authClient)
                     }
                 }
 
-                composable("SignUpScreen") { SignUpScreen(navCon) }
+                composable("SignUpScreen") {
+                    SignUpScreen(navCon, authClient)
+                }
                 composable("OwnerScreen") { OwnerScreen() }
             }
         }

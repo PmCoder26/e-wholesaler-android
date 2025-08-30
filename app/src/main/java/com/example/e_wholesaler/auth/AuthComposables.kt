@@ -1,21 +1,15 @@
 package com.example.e_wholesaler.auth
 
 import android.widget.Toast
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.rememberScrollableState
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
@@ -47,9 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -65,7 +57,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.e_wholesaler.auth.dtos.Gender
 import com.example.e_wholesaler.auth.dtos.UserType
 import kotlinx.coroutines.launch
-import org.koin.compose.koinInject
 import org.koin.core.qualifier.named
 import org.koin.java.KoinJavaComponent.inject
 import org.parimal.auth.AuthClient
@@ -76,7 +67,12 @@ import org.parimal.auth.dtos.SignUpRequest
 
 @Preview(showBackground = true)
 @Composable
-fun SignUpScreen(navCon: NavHostController = rememberNavController()) {
+fun SignUpScreenPreview() {
+    SignUpScreen(rememberNavController(), null)
+}
+
+@Composable
+fun SignUpScreen(navCon: NavHostController = rememberNavController(), authClient: AuthClient? = null) {
     var fullName by remember { mutableStateOf("") }
     var mobileNumber by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
@@ -87,7 +83,6 @@ fun SignUpScreen(navCon: NavHostController = rememberNavController()) {
     var userType by remember { mutableStateOf(UserType.OWNER) }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    val authClient: AuthClient = koinInject(named("auth-client"))
     val scope = rememberCoroutineScope()
 
     Box(
@@ -174,7 +169,7 @@ fun SignUpScreen(navCon: NavHostController = rememberNavController()) {
                                 }
                                 else {
                                     scope.launch {
-                                        val isSignedUp = authClient.signUp(
+                                        val isSignedUp = authClient!!.signUp(
                                             SignUpRequest(
                                                 username = mobileNumber,
                                                 password = password,
@@ -299,11 +294,15 @@ fun DropdownMenuField(selectedItem: String, items: List<String>, onItemSelected:
 
 @Preview(showBackground = true)
 @Composable
-fun LoginScreen(navCon: NavHostController = rememberNavController()) {
+fun LoginScreenPreview() {
+    LoginScreen()
+}
+
+@Composable
+fun LoginScreen(navCon: NavHostController = rememberNavController(), authClient: AuthClient? = null) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    val authClient: AuthClient = koinInject(named("auth-client"))
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -407,7 +406,7 @@ fun LoginScreen(navCon: NavHostController = rememberNavController()) {
                     Button(
                         onClick = {
                             scope.launch {
-                                val isLoggedIn = authClient.login(
+                                val isLoggedIn = authClient!!.login(
                                     LoginRequest(username, password)
                                 )
                                 if(isLoggedIn) {
