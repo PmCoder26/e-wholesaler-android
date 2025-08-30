@@ -7,10 +7,8 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.header
-import io.ktor.http.HttpMessageBuilder
 import org.example.project.ktor_client.HOST_URL
 import org.parimal.auth.TokenManager
-import org.parimal.utils.ApiError
 import org.parimal.utils.ApiResponse
 
 class OwnerClient(
@@ -29,10 +27,6 @@ class OwnerClient(
             Log.e("Home screen details fetch error: ", e.message.toString())
             null
         }
-        response?.error?.let {
-            generateApiLog("Owner id response error", it)
-            return null
-        }
         return response?.data
     }
 
@@ -46,11 +40,6 @@ class OwnerClient(
         } catch (e: Exception) {
             generateLog("Home screen details fetch error: ", e)
             null
-        }
-        Log.d("Home screen details: ", response.toString())
-        response?.error?.let {
-            generateApiLog("Home screen details response error: ", it)
-            return null
         }
         return response?.data
     }
@@ -66,20 +55,11 @@ class OwnerClient(
             generateLog("Owner details fetch error: ", e)
             null
         }
-        Log.d("Owner details: ", response.toString())
-        response?.error?.let {
-            generateApiLog("Owner details response error: ", it)
-            return null
-        }
         return response?.data
     }
 
     private fun generateLog(title: String, e: Exception) {
         Log.e(title , e.message.toString())
-    }
-
-    private fun generateApiLog(title: String, e: ApiError) {
-        Log.e(title, e.message)
     }
 
 }

@@ -1,6 +1,5 @@
 package org.parimal.auth
 
-import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -23,10 +22,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.example.project.ktor_client.HOST_URL
-import org.parimal.auth.dtos.TokenState
-import org.parimal.utils.ApiResponse
 import org.parimal.auth.dtos.LoginResponse
+import org.parimal.auth.dtos.TokenState
 import org.parimal.auth.dtos.Tokens
+import org.parimal.utils.ApiResponse
 
 class TokenManager(
     private var dataStore: DataStore<Preferences>,
@@ -49,8 +48,7 @@ class TokenManager(
         userTypeId.value
     ))
 
-    private val tokenState =
-        combine(
+    private val tokenState = combine(
             accessToken, refreshToken, userType, userTypeId, _state
         ) { accessToken, refreshToken, userType, userTypeId, _state ->
             _state.copy(
@@ -96,8 +94,11 @@ class TokenManager(
 
                 _state.update {
                     println("Tokens updated")
-                    TokenState(
-                        accessToken.value, refreshToken.value, userType.value, userTypeId.value
+                    it.copy(
+                        accessToken.value,
+                        refreshToken.value,
+                        userType.value,
+                        userTypeId.value
                     )
                 }
             }
@@ -106,8 +107,8 @@ class TokenManager(
 
     suspend fun saveTokens(data: LoginResponse) {
         dataStore.edit { pref ->
-            pref[ACCESS_TOKEN_KEY] = data.accessToken
-            pref[REFRESH_TOKEN_KEY] = data.refreshToken
+            pref[ACCESS_TOKEN_KEY] = "Bearer " + data.accessToken
+            pref[REFRESH_TOKEN_KEY] = "Bearer " + data.refreshToken
             pref[USER_TYPE_KEY] = data.userType.toString()
             pref[USER_TYPE_ID_KEY] = data.userTypeId
         }

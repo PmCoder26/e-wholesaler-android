@@ -6,13 +6,15 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.e_wholesaler.main.users.owner.clients.OwnerClient
+import com.example.e_wholesaler.main.users.owner.dtos.Details
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class OwnerViewModel(
@@ -20,19 +22,27 @@ class OwnerViewModel(
     private val dataStore: DataStore<Preferences>
 ) : ViewModel() {
 
-    private val OWNER_ID_KEY = longPreferencesKey("owner_id")
+    private val OWNER_ID_KEY = longPreferencesKey("user_type_id")
 
     private var ownerId = MutableStateFlow<Long?>(null)
-    private var ownerDetails = MutableStateFlow<OwnerDetails?>(null)
-    private var homeDetails = MutableStateFlow<HomeScreenDetails?>(null)
+    private var _ownerDetails = MutableStateFlow<OwnerDetails?>(null)
+    private var _homeDetails = MutableStateFlow<HomeScreenDetails?>(null)
+    private val _details = MutableStateFlow(Details(_homeDetails.value, _ownerDetails.value))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
+
+    val detailsFlow = combine(_homeDetails, _ownerDetails, _details) { homeDetails, ownerDetails, details ->
+        details?.copy(homeDetails, ownerDetails)
+    }
 
 
     init {
-        viewModelScope.launch(Dispatchers.IO) {
-            dataStore.data.collectLatest { pref ->
-                ownerId.value = pref[OWNER_ID_KEY]
-                cancel()
-            }
+        viewModelScope.launch {
+            // .first() gives the current snapshot of preferences instead of continuous updates.
+            val pref = dataStore.data.first()
+            ownerId.value = pref[OWNER_ID_KEY]
+            println("OwnerId: ${ownerId.value}")
+            getHomeScreenDetails()
+            getOwnerDetails()
         }
     }
 
@@ -40,7 +50,7 @@ class OwnerViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             ownerId.value?.let {
                 val homeScreenDetails = ownerClient.getHomeScreenDetails(it)
-                homeDetails.value = homeScreenDetails
+                _homeDetails.value = homeScreenDetails
             }
         }
     }
@@ -49,7 +59,7 @@ class OwnerViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             ownerId.value?.let {
                 val ownerDetails = ownerClient.getOwnerDetails(it)
-                this@OwnerViewModel.ownerDetails.value = ownerDetails
+                _ownerDetails.value = ownerDetails
             }
         }
     }

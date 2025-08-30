@@ -1,5 +1,6 @@
 package org.parimal.auth
 
+import android.util.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.post
@@ -30,11 +31,7 @@ class AuthClient(
             println("SignUp error: ${e.message}")
             null
         }
-        response?.error?.let {
-            println("SignUp response error: $it")
-            return false
-        }
-        return true
+        return response?.data != null
     }
 
     suspend fun login(loginRequest: LoginRequest): Boolean {
@@ -51,13 +48,20 @@ class AuthClient(
         }
         response?.data?.let {
             tokenManager.saveTokens(it)
-            return true
         }
-        response?.error?.let {
-            println("Login response error: $it")
-        }
-        return false
+        return response?.data != null
     }
+
+    suspend fun logout(): Boolean {
+        try {
+            tokenManager.clearTokens()
+            return true
+        } catch (e: Exception) {
+            Log.e("Logout error: ", e.message.toString())
+            return false
+        }
+    }
+
 //
 //    fun checkTokens(): Boolean {
 //        val tokenState = tokenManager?.tokenState2?.value

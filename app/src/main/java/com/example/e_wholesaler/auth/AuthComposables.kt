@@ -57,7 +57,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.e_wholesaler.auth.dtos.Gender
 import com.example.e_wholesaler.auth.dtos.UserType
 import kotlinx.coroutines.launch
-import org.koin.core.qualifier.named
 import org.koin.java.KoinJavaComponent.inject
 import org.parimal.auth.AuthClient
 import org.parimal.auth.TokenManager
@@ -410,7 +409,7 @@ fun LoginScreen(navCon: NavHostController = rememberNavController(), authClient:
                                     LoginRequest(username, password)
                                 )
                                 if(isLoggedIn) {
-                                    val tokenManager by inject<TokenManager>(TokenManager::class.java, named("token-manager"))
+                                    val tokenManager by inject<TokenManager>(TokenManager::class.java)
                                     if(tokenManager.tokensCheck()) {
                                         val userType = tokenManager.tokenState2.value.userType
                                         when(userType) {

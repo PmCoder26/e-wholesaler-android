@@ -6,6 +6,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.e_wholesaler.auth.TokenRefreshWorker
 import com.example.e_wholesaler.dependency_injection.di.appModule
+import com.example.e_wholesaler.dependency_injection.di.ownerModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 import java.util.concurrent.TimeUnit
@@ -17,7 +18,7 @@ class MyApplication : Application() {
 
         startKoin {
             androidContext(this@MyApplication)
-            modules(appModule)
+            modules(appModule, ownerModule)
         }
 
         val workRequest = PeriodicWorkRequestBuilder<TokenRefreshWorker>(

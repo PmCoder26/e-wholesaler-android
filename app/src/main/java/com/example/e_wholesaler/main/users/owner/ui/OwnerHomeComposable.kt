@@ -31,6 +31,8 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,16 +45,26 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
+import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
+import com.example.ui.OwnerInfoScreen
+import org.koin.androidx.compose.koinViewModel
 
-@Preview(showBackground = true)
+
 @Composable
 fun OwnerScreen() {
 
     val navCon = rememberNavController()
+    val ownerViewModel = koinViewModel<OwnerViewModel>()
+    val details by ownerViewModel.detailsFlow.collectAsState(null)
 
     NavHost(navController = navCon, startDestination = "OwnerHomeScreen") {
         composable("OwnerHomeScreen") {
-            OwnerHomeScreen(navCon)
+            OwnerHomeScreen(navCon, details?.ownerDetails)
+        }
+
+        composable("OwnerInfoScreen") {
+            OwnerInfoScreen(navCon, details?.ownerDetails)
         }
     }
 
@@ -61,14 +73,47 @@ fun OwnerScreen() {
 
 @Preview(showBackground = true)
 @Composable
-fun OwnerHomeScreen(navController: NavHostController = rememberNavController()) {
+fun OwnerHomeScreenPreview() {
+    OwnerHomeScreen(rememberNavController(), null)
+}
+
+@Composable
+fun OwnerHomeScreen(navController: NavHostController, ownerDetails: OwnerDetails?) {
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopBar()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "E Wholesaler",
+                    style = TextStyle(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 28.sp,
+                        color = Color(0xFF007BFF) // Blue color for branding
+                    ),
+                )
+                IconButton(
+                    onClick = {
+                        navController.navigate("OwnerInfoScreen")
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle, // Replace with actual icon
+                        contentDescription = "Profile",
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
         },
         bottomBar = { BottomNavigationBar(navController) }
     ) { innerPadding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -77,7 +122,7 @@ fun OwnerHomeScreen(navController: NavHostController = rememberNavController()) 
         ) {
             // Greeting Section
             Text(
-                text = "Welcome Back, Sagar Matte",
+                text = "Welcome Back, ${ownerDetails?.name}",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -101,36 +146,6 @@ fun OwnerHomeScreen(navController: NavHostController = rememberNavController()) 
                     StatCard(stat)
                 }
             }
-        }
-    }
-}
-
-// Top Bar
-@Composable
-fun TopBar() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "E Wholesaler",
-            style = TextStyle(
-                fontWeight = FontWeight.Bold,
-                fontSize = 28.sp,
-                color = Color(0xFF007BFF) // Blue color for branding
-            ),
-        )
-        IconButton(
-            onClick = { /* Handle Profile Click */ },
-        ) {
-            Icon(
-                imageVector = Icons.Default.AccountCircle, // Replace with actual icon
-                contentDescription = "Profile",
-                modifier = Modifier.size(32.dp)
-            )
         }
     }
 }
