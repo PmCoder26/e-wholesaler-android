@@ -1,6 +1,7 @@
 package com.example.e_wholesaler.main.users.owner.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,10 +17,11 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -45,7 +47,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
+import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
 import com.example.ui.OwnerInfoScreen
 import org.koin.androidx.compose.koinViewModel
@@ -60,7 +62,9 @@ fun OwnerScreen() {
 
     NavHost(navController = navCon, startDestination = "OwnerHomeScreen") {
         composable("OwnerHomeScreen") {
-            OwnerHomeScreen(navCon, details?.ownerDetails)
+            OwnerHomeScreen(navCon, refreshStats = { ownerViewModel.getHomeScreenDetails()
+                println("inside the block")
+                                                   }, details?.ownerDetails?.name.toString(), details?.homeScreenDetails)
         }
 
         composable("OwnerInfoScreen") {
@@ -74,11 +78,11 @@ fun OwnerScreen() {
 @Preview(showBackground = true)
 @Composable
 fun OwnerHomeScreenPreview() {
-    OwnerHomeScreen(rememberNavController(), null)
+    OwnerHomeScreen(rememberNavController(), {}, "null", null)
 }
 
 @Composable
-fun OwnerHomeScreen(navController: NavHostController, ownerDetails: OwnerDetails?) {
+fun OwnerHomeScreen(navController: NavHostController, refreshStats: () -> Unit, ownerName: String, homeScreenDetails: HomeScreenDetails?) {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -121,11 +125,21 @@ fun OwnerHomeScreen(navController: NavHostController, ownerDetails: OwnerDetails
                 .padding(16.dp)
         ) {
             // Greeting Section
-            Text(
-                text = "Welcome Back, ${ownerDetails?.name}",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+            ){
+                Text(
+                    text = "Welcome Back, $ownerName",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(
+                    onClick = { refreshStats() },
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Icon(imageVector = Icons.Default.Refresh, contentDescription = "refresh stats")
+                }
+            }
             Text(
                 text = "Thursday, March 14, 2024",
                 style = MaterialTheme.typography.bodyMedium,
@@ -142,7 +156,7 @@ fun OwnerHomeScreen(navController: NavHostController, ownerDetails: OwnerDetails
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
 
-                items (getOwnerStats()) { stat ->
+                items (getOwnerStats(homeScreenDetails)) { stat ->
                     StatCard(stat)
                 }
             }
@@ -154,14 +168,12 @@ fun OwnerHomeScreen(navController: NavHostController, ownerDetails: OwnerDetails
 data class OwnerStat(val title: String, val value: String, val isHighlighted: Boolean = false, val extraInfo: String? = null)
 
 // Dummy Data
-fun getOwnerStats(): List<OwnerStat> {
-    return listOf(
-        OwnerStat("Daily Revenue", "₹12,458", isHighlighted = true),
-        OwnerStat("Active Orders", "284"),
-        OwnerStat("Total Shops", "156"),
-        OwnerStat("Available Workers", "89", extraInfo = "42 active now")
-    )
-}
+fun getOwnerStats(homeScreenDetails: HomeScreenDetails?): List<OwnerStat> =  listOf(
+    OwnerStat("Daily Revenue", "Rs. ${homeScreenDetails?.salesAmount.toString()}", isHighlighted = true),
+    OwnerStat("Active Orders", homeScreenDetails?.creatingOrderCount.toString()),
+    OwnerStat("Total Shops", homeScreenDetails?.shopCount.toString()),
+    OwnerStat("Available Workers", homeScreenDetails?.workerCount.toString())
+)
 
 // Stat Card UI
 @Composable
@@ -216,7 +228,12 @@ fun BottomNavigationBar(navController: NavHostController) {
         containerColor = Color.White
     ) {
         val items = listOf("Home", "Products", "Workers", "Orders")
-        val icons = listOf(Icons.Default.Home, Icons.Filled.List, Icons.Default.Person, Icons.Default.ShoppingCart)
+        val icons = listOf(
+            Icons.Default.Home,
+            Icons.AutoMirrored.Filled.List,
+            Icons.Default.Person,
+            Icons.Default.ShoppingCart
+        )
 
         items.forEachIndexed { index, item ->
             NavigationBarItem(

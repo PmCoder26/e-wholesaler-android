@@ -31,6 +31,7 @@ class OwnerViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
 
     val detailsFlow = combine(_homeDetails, _ownerDetails, _details) { homeDetails, ownerDetails, details ->
+        println("Inside the refresh flow")
         details?.copy(homeDetails, ownerDetails)
     }
 
@@ -47,8 +48,10 @@ class OwnerViewModel(
     }
 
     fun getHomeScreenDetails() {
+        println("Inside the home screen details but outside the viewmodelscope.launch")
         viewModelScope.launch(Dispatchers.IO) {
             ownerId.value?.let {
+                println("Inside the refresh flow")
                 val homeScreenDetails = ownerClient.getHomeScreenDetails(it)
                 _homeDetails.value = homeScreenDetails
             }
