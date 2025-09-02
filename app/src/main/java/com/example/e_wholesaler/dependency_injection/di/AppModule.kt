@@ -4,9 +4,11 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
 import io.ktor.client.engine.okhttp.OkHttp
 import org.example.project.ktor_client.createHttpClient
 import org.koin.android.ext.koin.androidContext
+import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.core.module.Module
 import org.koin.dsl.module
 import org.parimal.auth.AuthClient
@@ -33,4 +35,7 @@ val appModule: Module = module {
         AuthClient(get(), get())
     }
 
+    viewModel() {
+        NavigationViewModel()
+    }
 }

@@ -1,5 +1,8 @@
 package com.example.ui
 
+import android.annotation.SuppressLint
+import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MailOutline
@@ -47,25 +49,45 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
 import com.example.e_wholesaler.auth.dtos.Gender
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
+import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.koin.androidx.compose.koinViewModel
+import org.koin.java.KoinJavaComponent.inject
+import org.parimal.auth.AuthClient
 
 
 @Preview(showBackground = true)
 @Composable
 fun OwnerInfoScreenPreview() {
-    OwnerInfoScreen(rememberNavController(), OwnerDetails(1, "Sagar Matte", Gender.MALE, 9822543343, "address", "Pune", "Maharashtra"))
+    OwnerInfoScreen(
+        OwnerDetails(
+            1,
+            "Sagar Matte",
+            Gender.MALE,
+            9822543343,
+            "address",
+            "Pune",
+            "Maharashtra"
+        )
+    )
 }
 
+@SuppressLint("ContextCastToActivity")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OwnerInfoScreen(navController: NavHostController, owner: OwnerDetails?) {
+fun OwnerInfoScreen(owner: OwnerDetails?) {
     val primaryColor = Color(0xFF2457EB) // Deep Blue
     val lightBlue = Color(0xFFE6EEFF) // Card Background
     val backgroundGradient = Brush.verticalGradient(
         colors = listOf(Color(0xFFF5F9FF), Color(0xFFDDE9FF))
+    )
+    val activity = LocalContext.current as ComponentActivity
+    val navigationViewModel = koinViewModel<NavigationViewModel>(
+        viewModelStoreOwner = activity
     )
 
     Scaffold(
@@ -73,7 +95,9 @@ fun OwnerInfoScreen(navController: NavHostController, owner: OwnerDetails?) {
             TopAppBar(
                 title = { Text("Information Dashboard", color = Color.White, fontSize = 18.sp) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = {
+                        navigationViewModel.getController("OwnerController")?.popBackStack()
+                    }) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
@@ -92,17 +116,25 @@ fun OwnerInfoScreen(navController: NavHostController, owner: OwnerDetails?) {
 
                 Button(
                     onClick = {
-//                        scope.launch(Dispatchers.IO) {
-//                            val authClient by inject<AuthClient>(AuthClient::class.java)
-//                            val loggedOut = authClient.logout()
-//                            if(loggedOut) {
-//                                Toast.makeText(context, "Logout Successful!", Toast.LENGTH_SHORT).show()
-//                                navController.clearBackStack("OwnerHomeScreen")
-//                            }
-//                            else Toast.makeText(context, "Logout Failed!", Toast.LENGTH_SHORT).show()
-//                        }
+                        scope.launch(Dispatchers.Main) {
+                            val authClient by inject<AuthClient>(AuthClient::class.java)
+                            val loggedOut = authClient.logout()
+                            if (loggedOut) {
+                                navigationViewModel.updateIsLoggedIn()
+                                navigationViewModel.updateHasNavigated()
+                                navigationViewModel.getController("MainController")
+                                    ?.popBackStack("LoginScreen", false)
+                            } else withContext(Dispatchers.Main) {
+                                Toast.makeText(
+                                    context,
+                                    "Logout Failed!",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .border(
                             border = BorderStroke(7.dp, primaryColor),
                             shape = RoundedCornerShape(11.dp)

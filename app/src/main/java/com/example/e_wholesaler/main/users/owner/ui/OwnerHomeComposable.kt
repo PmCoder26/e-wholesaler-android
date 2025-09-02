@@ -1,5 +1,7 @@
 package com.example.e_wholesaler.main.users.owner.ui
 
+import android.annotation.SuppressLint
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,11 +35,13 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -49,26 +53,39 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
+import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
 import com.example.ui.OwnerInfoScreen
 import org.koin.androidx.compose.koinViewModel
 
 
+@SuppressLint("ContextCastToActivity")
 @Composable
 fun OwnerScreen() {
 
     val navCon = rememberNavController()
     val ownerViewModel = koinViewModel<OwnerViewModel>()
+    val activity = LocalContext.current as ComponentActivity
+    val navigationViewModel = koinViewModel<NavigationViewModel>(
+        viewModelStoreOwner = activity
+    )
     val details by ownerViewModel.detailsFlow.collectAsState(null)
+
+    LaunchedEffect(Unit) {
+        navigationViewModel.addController("OwnerController", navCon)
+    }
 
     NavHost(navController = navCon, startDestination = "OwnerHomeScreen") {
         composable("OwnerHomeScreen") {
-            OwnerHomeScreen(navCon, refreshStats = { ownerViewModel.getHomeScreenDetails()
-                println("inside the block")
-                                                   }, details?.ownerDetails?.name.toString(), details?.homeScreenDetails)
+            OwnerHomeScreen(
+                navCon,
+                refreshStats = { ownerViewModel.getHomeScreenDetails() },
+                details?.ownerDetails?.name.toString(),
+                details?.homeScreenDetails
+            )
         }
 
         composable("OwnerInfoScreen") {
-            OwnerInfoScreen(navCon, details?.ownerDetails)
+            OwnerInfoScreen(details?.ownerDetails)
         }
     }
 

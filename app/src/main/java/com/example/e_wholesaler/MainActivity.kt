@@ -6,9 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -16,7 +14,9 @@ import com.example.e_wholesaler.auth.LoginScreen
 import com.example.e_wholesaler.auth.SignUpScreen
 import com.example.e_wholesaler.auth.dtos.UserType
 import com.example.e_wholesaler.main.users.owner.ui.OwnerScreen
+import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
 import org.koin.android.ext.android.inject
+import org.koin.androidx.compose.koinViewModel
 import org.parimal.auth.AuthClient
 import org.parimal.auth.TokenManager
 import org.parimal.auth.dtos.TokenState
@@ -30,20 +30,28 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navCon = rememberNavController()
             val tokenState by tokenManager.tokenState2.collectAsState()
-            var isLoggedIn by remember { mutableStateOf(false) }
-            var hasNavigated by remember { mutableStateOf(false) } // ✅ Prevent duplicate navigation
+            val navigationViewModel = koinViewModel<NavigationViewModel>(
+                viewModelStoreOwner = LocalContext.current as ComponentActivity
+            )
+            val navigationData by navigationViewModel.navigationData.collectAsState()
+            val hasNavigated = navigationData.hasNavigatedFromLogin
+            val isLoggedIn = navigationData.isLoggedIn
 
             // ✅ Ensure LaunchedEffect runs only once when needed
             LaunchedEffect(tokenState, hasNavigated) {
                 if (!hasNavigated && tokensAndCredentialsCheck(tokenState)) {
-                    isLoggedIn = true
+                    navigationViewModel.updateIsLoggedIn()
                 }
+            }
+
+            LaunchedEffect(Unit) {
+                navigationViewModel.addController("MainController", navCon)
             }
 
             NavHost(navController = navCon, startDestination = "LoginScreen") {
                 composable("LoginScreen") {
                     if (isLoggedIn && !hasNavigated) {
-                        hasNavigated = true
+                        navigationViewModel.updateHasNavigated()
                         when (tokenState.userType) {
                             UserType.OWNER -> navCon.navigate("OwnerScreen")
                             UserType.WORKER -> TODO()
