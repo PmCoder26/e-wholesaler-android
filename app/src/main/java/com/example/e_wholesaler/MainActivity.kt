@@ -3,7 +3,9 @@ package com.example.e_wholesaler
 import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,6 +24,8 @@ import org.parimal.auth.TokenManager
 import org.parimal.auth.dtos.TokenState
 
 class MainActivity : ComponentActivity() {
+
+
     @SuppressLint("RestrictedApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,11 +74,15 @@ class MainActivity : ComponentActivity() {
                     SignUpScreen(navCon, authClient)
                 }
                 composable("OwnerScreen") {
+                    BackHandlerToClose()
                     OwnerScreen()
                 }
             }
         }
     }
+
+    @Composable
+    fun BackHandlerToClose() = BackHandler(enabled = true) { this@MainActivity.finish() }
 
     private fun tokensAndCredentialsCheck(tokenState: TokenState): Boolean {
         return !(tokenState.accessToken.isNullOrBlank()
