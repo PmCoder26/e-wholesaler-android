@@ -1,6 +1,7 @@
 package com.example.e_wholesaler.main.users.owner.clients
 
 import android.util.Log
+import com.example.e_wholesaler.main.users.owner.dtos.DailyShopRevenue
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 import io.ktor.client.HttpClient
@@ -53,6 +54,20 @@ class OwnerClient(
             }.body< ApiResponse<OwnerDetails>>()
         } catch (e: Exception) {
             generateLog("Owner details fetch error: ", e)
+            null
+        }
+        return response?.data
+    }
+
+    suspend fun getDailyRevenue(ownerId: Long): List<DailyShopRevenue>? {
+        val response = try {
+            httpClient.get(
+                urlString = "http://$HOST_URL:8090/api/v1/shops/owner/$ownerId/daily-revenue"
+            ) {
+                header("Authorization", tokenManager.tokenState2.value.accessToken)
+            }.body<ApiResponse<List<DailyShopRevenue>>>()
+        } catch (e: Exception) {
+            generateLog("Owner daily revenue fetch error: ", e)
             null
         }
         return response?.data

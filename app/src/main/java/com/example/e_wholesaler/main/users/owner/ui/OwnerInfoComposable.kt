@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -85,10 +86,15 @@ fun OwnerInfoScreen(owner: OwnerDetails?) {
     val backgroundGradient = Brush.verticalGradient(
         colors = listOf(Color(0xFFF5F9FF), Color(0xFFDDE9FF))
     )
-    val activity = LocalContext.current as ComponentActivity
-    val navigationViewModel = koinViewModel<NavigationViewModel>(
-        viewModelStoreOwner = activity
-    )
+    // Fixes the preview render issues.
+    // LocalInspectionMode helps detect if the composable is running in Preview.
+    // This avoids crashes by skipping runtime-only code (ViewModels, DI, NavController) in Preview.
+    val isPreview = LocalInspectionMode.current
+    val navigationViewModel = if (!isPreview) {
+        koinViewModel<NavigationViewModel>(
+            viewModelStoreOwner = LocalContext.current as ComponentActivity
+        )
+    } else null
 
     Scaffold(
         topBar = {
@@ -96,7 +102,7 @@ fun OwnerInfoScreen(owner: OwnerDetails?) {
                 title = { Text("Information Dashboard", color = Color.White, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(onClick = {
-                        navigationViewModel.getController("OwnerController")?.popBackStack()
+                        navigationViewModel?.getController("OwnerController")?.popBackStack()
                     }) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
@@ -120,9 +126,9 @@ fun OwnerInfoScreen(owner: OwnerDetails?) {
                             val authClient by inject<AuthClient>(AuthClient::class.java)
                             val loggedOut = authClient.logout()
                             if (loggedOut) {
-                                navigationViewModel.updateIsLoggedIn()
-                                navigationViewModel.updateHasNavigated()
-                                navigationViewModel.getController("MainController")
+                                navigationViewModel?.updateIsLoggedIn()
+                                navigationViewModel?.updateHasNavigated()
+                                navigationViewModel?.getController("MainController")
                                     ?.popBackStack("LoginScreen", false)
                             } else withContext(Dispatchers.Main) {
                                 Toast.makeText(

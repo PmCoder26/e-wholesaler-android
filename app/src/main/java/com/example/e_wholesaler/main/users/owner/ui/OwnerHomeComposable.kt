@@ -2,6 +2,7 @@ package com.example.e_wholesaler.main.users.owner.ui
 
 import android.annotation.SuppressLint
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -63,15 +65,20 @@ import org.koin.androidx.compose.koinViewModel
 fun OwnerScreen() {
 
     val navCon = rememberNavController()
-    val ownerViewModel = koinViewModel<OwnerViewModel>()
     val activity = LocalContext.current as ComponentActivity
-    val navigationViewModel = koinViewModel<NavigationViewModel>(
+    val isPreview = LocalInspectionMode.current
+    val navigationViewModel = if (!isPreview) {
+        koinViewModel<NavigationViewModel>(
+            viewModelStoreOwner = activity
+        )
+    } else null
+    val ownerViewModel = koinViewModel<OwnerViewModel>(
         viewModelStoreOwner = activity
     )
     val details by ownerViewModel.detailsFlow.collectAsState(null)
 
     LaunchedEffect(Unit) {
-        navigationViewModel.addController("OwnerController", navCon)
+        navigationViewModel?.addController("OwnerController", navCon)
     }
 
     NavHost(navController = navCon, startDestination = "OwnerHomeScreen") {
@@ -87,6 +94,10 @@ fun OwnerScreen() {
         composable("OwnerInfoScreen") {
             OwnerInfoScreen(details?.ownerDetails)
         }
+
+        composable("RevenueScreen") {
+            RevenueScreen()
+        }
     }
 
 }
@@ -98,6 +109,7 @@ fun OwnerHomeScreenPreview() {
     OwnerHomeScreen(rememberNavController(), {}, "null", null)
 }
 
+@SuppressLint("ContextCastToActivity")
 @Composable
 fun OwnerHomeScreen(navController: NavHostController, refreshStats: () -> Unit, ownerName: String, homeScreenDetails: HomeScreenDetails?) {
 
@@ -165,6 +177,16 @@ fun OwnerHomeScreen(navController: NavHostController, refreshStats: () -> Unit, 
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            val activity = LocalContext.current as ComponentActivity
+            val isPreview = LocalInspectionMode.current
+            val navigationViewModel = if (!isPreview) {
+                koinViewModel<NavigationViewModel>(
+                    viewModelStoreOwner = activity
+                )
+            } else null
+            val ownerViewModel = koinViewModel<OwnerViewModel>(
+                viewModelStoreOwner = activity
+            )
             // Stats Grid
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
@@ -174,7 +196,7 @@ fun OwnerHomeScreen(navController: NavHostController, refreshStats: () -> Unit, 
             ) {
 
                 items (getOwnerStats(homeScreenDetails)) { stat ->
-                    StatCard(stat)
+                    StatCard(stat, navigationViewModel, ownerViewModel)
                 }
             }
         }
@@ -194,11 +216,24 @@ fun getOwnerStats(homeScreenDetails: HomeScreenDetails?): List<OwnerStat> =  lis
 
 // Stat Card UI
 @Composable
-fun StatCard(stat: OwnerStat) {
+fun StatCard(stat: OwnerStat, viewModel: NavigationViewModel?, ownerViewModel: OwnerViewModel?) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1.3f),
+            .aspectRatio(1.3f)
+            .clickable {
+                val navController = viewModel?.getController("OwnerController")
+                when (stat.title) {
+                    "Daily Revenue" -> {
+                        ownerViewModel?.getDailyRevenue()
+                        navController?.navigate("RevenueScreen")
+                    }
+
+                    "Active Orders" -> TODO()
+                    "Total Shops" -> TODO()
+                    "Available Workers" -> TODO()
+                }
+            },
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(

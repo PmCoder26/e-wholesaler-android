@@ -32,13 +32,13 @@ class NavigationViewModel : ViewModel() {
     fun getController(controllerName: String) = navHostControllerMap[controllerName]
 
     fun updateHasNavigated() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Main) {
             hasNavigatedFromLogin.value = !hasNavigatedFromLogin.value
         }
     }
 
     fun updateIsLoggedIn() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Main) {
             isLoggedIn.value = !isLoggedIn.value
         }
     }

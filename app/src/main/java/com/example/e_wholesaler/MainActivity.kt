@@ -1,12 +1,12 @@
 package com.example.e_wholesaler
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -22,6 +22,7 @@ import org.parimal.auth.TokenManager
 import org.parimal.auth.dtos.TokenState
 
 class MainActivity : ComponentActivity() {
+    @SuppressLint("RestrictedApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val tokenManager by inject<TokenManager>()
@@ -31,13 +32,12 @@ class MainActivity : ComponentActivity() {
             val navCon = rememberNavController()
             val tokenState by tokenManager.tokenState2.collectAsState()
             val navigationViewModel = koinViewModel<NavigationViewModel>(
-                viewModelStoreOwner = LocalContext.current as ComponentActivity
+                viewModelStoreOwner = this
             )
             val navigationData by navigationViewModel.navigationData.collectAsState()
             val hasNavigated = navigationData.hasNavigatedFromLogin
             val isLoggedIn = navigationData.isLoggedIn
 
-            // ✅ Ensure LaunchedEffect runs only once when needed
             LaunchedEffect(tokenState, hasNavigated) {
                 if (!hasNavigated && tokensAndCredentialsCheck(tokenState)) {
                     navigationViewModel.updateIsLoggedIn()
@@ -53,13 +53,15 @@ class MainActivity : ComponentActivity() {
                     if (isLoggedIn && !hasNavigated) {
                         navigationViewModel.updateHasNavigated()
                         when (tokenState.userType) {
-                            UserType.OWNER -> navCon.navigate("OwnerScreen")
+                            UserType.OWNER -> {
+                                navCon.navigate("OwnerScreen")
+                            }
                             UserType.WORKER -> TODO()
                             UserType.CUSTOMER -> TODO()
                             UserType.NONE -> TODO()
                             null -> TODO()
                         }
-                    } else if(!isLoggedIn){
+                    } else if (!isLoggedIn) {
                         LoginScreen(navCon, authClient)
                     }
                 }
@@ -67,7 +69,9 @@ class MainActivity : ComponentActivity() {
                 composable("SignUpScreen") {
                     SignUpScreen(navCon, authClient)
                 }
-                composable("OwnerScreen") { OwnerScreen() }
+                composable("OwnerScreen") {
+                    OwnerScreen()
+                }
             }
         }
     }

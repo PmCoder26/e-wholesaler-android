@@ -1,40 +1,93 @@
 package com.example.e_wholesaler.main.users.owner.ui
 
+import android.annotation.SuppressLint
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.tooling.preview.Preview
+import com.example.e_wholesaler.main.users.owner.dtos.DailyShopRevenue
+import com.example.e_wholesaler.main.users.owner.dtos.SortType
+import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
+import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
+import org.koin.androidx.compose.koinViewModel
 
+@SuppressLint("ContextCastToActivity")
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
 fun RevenueScreen() {
+    val activity = LocalContext.current as ComponentActivity
+    val isPreview = LocalInspectionMode.current
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Revenue", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { /* TODO: Handle back navigation */ }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    val navigationViewModel = if (!isPreview) {
+                        koinViewModel<NavigationViewModel>(
+                            viewModelStoreOwner = activity
+                        )
+                    } else null
+                    IconButton(onClick = {
+                        navigationViewModel?.getController("OwnerController")?.popBackStack()
+                    }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.mediumTopAppBarColors(containerColor = Color(0xFF2B54F8))
             )
         },
     ) { paddingValues ->
+
+        val ownerViewModel = if (!isPreview) {
+            koinViewModel<OwnerViewModel>(
+                viewModelStoreOwner = activity
+            )
+        } else null
+        val totalShopRevenue = ownerViewModel?.totalRevenue?.collectAsState()?.value
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -42,19 +95,19 @@ fun RevenueScreen() {
                 .background(Color(0xFFEAF1FF))
                 .padding(horizontal = 16.dp)
         ) {
-            RevenueCard()
+            RevenueCard(totalShopRevenue?.totalRevenue ?: 0.0)
             Spacer(modifier = Modifier.height(16.dp))
             SearchBar()
             Spacer(modifier = Modifier.height(16.dp))
-            FilterChips()
+            FilterChips(ownerViewModel)
             Spacer(modifier = Modifier.height(16.dp))
-            RevenueList()
+            RevenueList(totalShopRevenue?.dailyShopRevenueList)
         }
     }
 }
 
 @Composable
-fun RevenueCard() {
+fun RevenueCard(totalRevenue: Double) {
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -68,7 +121,12 @@ fun RevenueCard() {
         ) {
             Text("Total Daily Revenue", fontSize = 16.sp, color = Color.Gray)
             Spacer(modifier = Modifier.height(8.dp))
-            Text("₹1,85,425.00", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            Text(
+                totalRevenue.toString(),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
         }
     }
 }
@@ -85,24 +143,33 @@ fun SearchBar() {
 }
 
 @Composable
-fun FilterChips() {
-    Row(
+fun FilterChips(ownerViewModel: OwnerViewModel?) {
+    LazyRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Start
     ) {
-        listOf("Name", "City", "Revenue").forEach {
-            FilterChip(it)
+        items(listOf("Name", "City", "Revenue")) {
+            FilterChip(it, updateFilter = {
+                val sortType = when (it) {
+                    "Name" -> SortType.NAME
+                    "City" -> SortType.CITY
+                    else -> SortType.REVENUE
+                }
+                ownerViewModel?.updateSortType(sortType)
+            })
         }
     }
 }
 
 @Composable
-fun FilterChip(label: String) {
+fun FilterChip(label: String, updateFilter: () -> Unit) {
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(Color.White),
         elevation = CardDefaults.cardElevation(4.dp),
-        modifier = Modifier.padding(4.dp)
+        modifier = Modifier
+            .padding(4.dp)
+            .clickable { updateFilter() }
     ) {
         Text(
             text = label,
@@ -115,19 +182,18 @@ fun FilterChip(label: String) {
 }
 
 @Composable
-fun RevenueList() {
-    Column {
-        val revenueList = listOf(
-            Triple("Sagar Traders", "Mumbai | 42 transactions today", "₹42,500.00"),
-            Triple("Ratan Traders", "Delhi | 38 transactions today", "₹35,650.00"),
-            Triple("Mehta Traders", "Bangalore | 29 transactions today", "₹52,775.00"),
-            Triple("Krishna Traders", "Chennai | 45 transactions today", "₹54,500.00")
-        )
-
-        Column {
-            revenueList.forEach { (name, details, revenue) ->
-                RevenueItem(name, details, revenue)
-                Spacer(modifier = Modifier.height(8.dp))
+fun RevenueList(dailyShopRevenueList: List<DailyShopRevenue>?) {
+    LazyColumn {
+        dailyShopRevenueList?.let {
+            itemsIndexed(
+                it,
+                key = { index, shopRevenue -> shopRevenue.shopName }) { index, shopRevenue ->
+                RevenueItem(
+                    name = shopRevenue.shopName,
+                    "${shopRevenue.city} | ${shopRevenue.dailyTransactions} transactions today",
+                    revenue = shopRevenue.dailyRevenue.toString()
+                )
+                Spacer(Modifier.height(5.dp))
             }
         }
     }

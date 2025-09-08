@@ -261,7 +261,8 @@ fun DropdownMenuField(selectedItem: String, items: List<String>, onItemSelected:
     Column {
         Text("State", fontSize = 16.sp, color = Color.Black, fontWeight = FontWeight.Bold)
         Box(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
                 .background(Color.White, RoundedCornerShape(12.dp))
                 .clickable { expanded = true }
                 .padding(16.dp)
@@ -413,7 +414,11 @@ fun LoginScreen(navCon: NavHostController = rememberNavController(), authClient:
                                     if(tokenManager.tokensCheck()) {
                                         val userType = tokenManager.tokenState2.value.userType
                                         when(userType) {
-                                            UserType.OWNER -> navCon.navigate("OwnerScreen")
+                                            UserType.OWNER -> {
+                                                navCon.navigate("OwnerScreen") {
+                                                    popUpTo("LoginScreen") { inclusive = true }
+                                                }
+                                            }
                                             UserType.WORKER -> TODO()
                                             UserType.CUSTOMER -> TODO()
                                             UserType.NONE -> TODO()
