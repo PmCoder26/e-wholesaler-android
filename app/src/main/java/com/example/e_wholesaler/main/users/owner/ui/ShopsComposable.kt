@@ -1,6 +1,5 @@
 package com.example.e_wholesaler.main.users.owner.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,10 +16,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,21 +30,30 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.e_wholesaler.R
+import com.example.e_wholesaler.main.users.owner.dtos.Shop
+import com.example.e_wholesaler.main.users.owner.dtos.SortType
+import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
+import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
+import org.koin.androidx.compose.koinViewModel
 
 
 // Define Colors based on the image
-val TopBarBlue = Color(0xFF3700B3) // A standard Material Blue, adjust if needed
-val BackgroundLightBlue = Color(0xFFE3F2FD) // A light blue
+val TopBarBlue = Color(0xFF0052D4) // A standard Material Blue, adjust if needed
+val BackgroundLightBlue = Color(0x41E3F2FD) // A light blue
 val CardBackgroundWhite = Color.White
 val TextPrimary = Color.Black
 val TextSecondary = Color.DarkGray
@@ -56,14 +66,19 @@ val ButtonIconColor = TopBarBlue // Assuming button icons match top bar blue
 @Composable
 fun ShopsScreen() {
     // Sample data representing the shops
-    val shops = remember {
-        listOf(
-            Shop("Sagar Traders", "Mumbai"),
-            Shop("Ratan Traders", "Delhi"),
-            Shop("Krishna Traders", "Bangalore"),
-            Shop("Ganesh Traders", "Chennai")
+
+    val ownerViewModel = if (!getIsPreview()) {
+        koinViewModel<OwnerViewModel>(
+            viewModelStoreOwner = getViewModelStoreOwner()
         )
-    }
+    } else null
+    val navigationViewModel = if (!getIsPreview()) {
+        koinViewModel<NavigationViewModel>(
+            viewModelStoreOwner = getViewModelStoreOwner()
+        )
+    } else null
+    val shopsState = ownerViewModel?.shopsState?.collectAsState()?.value
+    val shops = shopsState?.shops ?: emptyList()
     var searchQuery by remember { mutableStateOf("") }
 
     Scaffold(
@@ -71,7 +86,11 @@ fun ShopsScreen() {
             TopAppBar(
                 title = { Text("Shops", color = IconColorWhite) },
                 navigationIcon = {
-                    IconButton(onClick = { /* Handle back navigation */ }) {
+                    IconButton(
+                        onClick = {
+                            navigationViewModel?.getController("OwnerController")?.popBackStack()
+                        }
+                    ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
@@ -88,10 +107,10 @@ fun ShopsScreen() {
                         )
                     }
                 },
-                modifier = Modifier.background(TopBarBlue)
+                colors = TopAppBarDefaults.topAppBarColors(TopBarBlue),
             )
         },
-        modifier = Modifier.background(BackgroundLightBlue)
+        containerColor = BackgroundLightBlue
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -113,10 +132,12 @@ fun ShopsScreen() {
                     )
                 },
                 colors = TextFieldDefaults.colors(
-//                    backgroundColor = CardBackgroundWhite, // White background for TextField
-//                    focusedIndicatorColor = Color.Transparent, // Hide the focus indicator line
-//                    unfocusedIndicatorColor = Color.Transparent, // Hide the unfocused indicator line
-//                    disabledIndicatorColor = Color.Transparent // Hide the disabled indicator line
+                    focusedContainerColor = CardBackgroundWhite,    // Background when focused
+                    unfocusedContainerColor = CardBackgroundWhite,  // Background when not focused
+                    disabledContainerColor = CardBackgroundWhite,   // Background when disabled
+                    focusedIndicatorColor = Color.Transparent,      // Hide the focus indicator line
+                    unfocusedIndicatorColor = Color.Transparent,    // Hide the unfocused indicator line
+                    disabledIndicatorColor = Color.Transparent      // Hide the disabled indicator line
                 ),
                 shape = RoundedCornerShape(8.dp) // Basic rounded corners
             )
@@ -130,17 +151,20 @@ fun ShopsScreen() {
             ) {
                 // Name Filter Button
                 OutlinedButton(
-                    onClick = { /* Handle sort by name */ },
+                    onClick = {
+                        ownerViewModel?.updateShopSortType(SortType.NAME)
+                    },
                     modifier = Modifier.weight(1f), // Make buttons share width equally
                     colors = ButtonDefaults.outlinedButtonColors(
-//                        backgroundColor = CardBackgroundWhite // White background for Button
+                        containerColor = CardBackgroundWhite // White background for Button
                     ),
                     shape = RoundedCornerShape(8.dp) // Basic rounded corners
                 ) {
                     Icon(
-                        Icons.Filled.Home, // Icon for sorting
+                        painter = painterResource(R.drawable.name_logo), // Icon for sorting
                         contentDescription = "Sort by Name",
-                        tint = ButtonIconColor
+                        tint = ButtonIconColor,
+                        modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(4.dp)) // Space between icon and text
                     Text("Name", color = ButtonIconColor)
@@ -148,15 +172,17 @@ fun ShopsScreen() {
 
                 // City Filter Button
                 OutlinedButton(
-                    onClick = { /* Handle filter by city */ },
+                    onClick = {
+                        ownerViewModel?.updateShopSortType(SortType.CITY)
+                    },
                     modifier = Modifier.weight(1f), // Make buttons share width equally
                     colors = ButtonDefaults.outlinedButtonColors(
-//                        backgroundColor = CardBackgroundWhite // White background for Button
+                        containerColor = CardBackgroundWhite // White background for Button
                     ),
                     shape = RoundedCornerShape(8.dp) // Basic rounded corners
                 ) {
                     Icon(
-                        Icons.Filled.Home, // Icon for location/city
+                        Icons.Filled.LocationOn, // Icon for location/city
                         contentDescription = "Filter by City",
                         tint = ButtonIconColor
                     )
@@ -177,24 +203,23 @@ fun ShopsScreen() {
                         ignoreCase = true
                     ) || it.city.contains(searchQuery, ignoreCase = true)
                 }) { shop ->
-                    ShopItemCard(shop = shop)
+                    ShopCard(shop = shop)
                 }
             }
         }
     }
 }
 
-// Data class for a Shop
-data class Shop(val name: String, val city: String)
-
 // Composable for displaying a single shop item in a Card
 @Composable
-fun ShopItemCard(shop: Shop) {
+fun ShopCard(shop: Shop) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .background(CardBackgroundWhite),
-        shape = RoundedCornerShape(12.dp) // Basic rounded corners for card
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp), // Basic rounded corners for card
+        colors = CardDefaults.cardColors(
+            CardBackgroundWhite
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp) // Internal padding within the card

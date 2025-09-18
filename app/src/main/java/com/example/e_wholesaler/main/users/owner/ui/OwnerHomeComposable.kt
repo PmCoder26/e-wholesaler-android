@@ -1,7 +1,7 @@
 package com.example.e_wholesaler.main.users.owner.ui
 
 import android.annotation.SuppressLint
-import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,13 +42,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -60,20 +60,24 @@ import com.example.ui.OwnerInfoScreen
 import org.koin.androidx.compose.koinViewModel
 
 
+@Composable
+fun getViewModelStoreOwner() = LocalActivity.current as ViewModelStoreOwner
+
+@Composable
+fun getIsPreview() = LocalInspectionMode.current
+
 @SuppressLint("ContextCastToActivity")
 @Composable
 fun OwnerScreen() {
 
     val navCon = rememberNavController()
-    val activity = LocalContext.current as ComponentActivity
-    val isPreview = LocalInspectionMode.current
-    val navigationViewModel = if (!isPreview) {
+    val navigationViewModel = if (!getIsPreview()) {
         koinViewModel<NavigationViewModel>(
-            viewModelStoreOwner = activity
+            viewModelStoreOwner = getViewModelStoreOwner()
         )
     } else null
     val ownerViewModel = koinViewModel<OwnerViewModel>(
-        viewModelStoreOwner = activity
+        viewModelStoreOwner = getViewModelStoreOwner()
     )
     val details by ownerViewModel.detailsFlow.collectAsState(null)
 
@@ -97,6 +101,10 @@ fun OwnerScreen() {
 
         composable("RevenueScreen") {
             RevenueScreen()
+        }
+
+        composable("ShopsScreen") {
+            ShopsScreen()
         }
     }
 
@@ -177,15 +185,13 @@ fun OwnerHomeScreen(navController: NavHostController, refreshStats: () -> Unit, 
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            val activity = LocalContext.current as ComponentActivity
-            val isPreview = LocalInspectionMode.current
-            val navigationViewModel = if (!isPreview) {
+            val navigationViewModel = if (!getIsPreview()) {
                 koinViewModel<NavigationViewModel>(
-                    viewModelStoreOwner = activity
+                    viewModelStoreOwner = getViewModelStoreOwner()
                 )
             } else null
             val ownerViewModel = koinViewModel<OwnerViewModel>(
-                viewModelStoreOwner = activity
+                viewModelStoreOwner = getViewModelStoreOwner()
             )
             // Stats Grid
             LazyVerticalGrid(
@@ -204,7 +210,12 @@ fun OwnerHomeScreen(navController: NavHostController, refreshStats: () -> Unit, 
 }
 
 // Stats Grid Data Model
-data class OwnerStat(val title: String, val value: String, val isHighlighted: Boolean = false, val extraInfo: String? = null)
+data class OwnerStat(
+    val title: String,
+    val value: String,
+    val isHighlighted: Boolean = false,
+    val extraInfo: String? = null
+)
 
 // Dummy Data
 fun getOwnerStats(homeScreenDetails: HomeScreenDetails?): List<OwnerStat> =  listOf(
@@ -216,7 +227,11 @@ fun getOwnerStats(homeScreenDetails: HomeScreenDetails?): List<OwnerStat> =  lis
 
 // Stat Card UI
 @Composable
-fun StatCard(stat: OwnerStat, viewModel: NavigationViewModel?, ownerViewModel: OwnerViewModel?) {
+fun StatCard(
+    stat: OwnerStat,
+    viewModel: NavigationViewModel?,
+    ownerViewModel: OwnerViewModel?
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -230,7 +245,11 @@ fun StatCard(stat: OwnerStat, viewModel: NavigationViewModel?, ownerViewModel: O
                     }
 
                     "Active Orders" -> TODO()
-                    "Total Shops" -> TODO()
+                    "Total Shops" -> {
+                        ownerViewModel?.getOwnerShops()
+                        navController?.navigate("ShopsScreen")
+                    }
+
                     "Available Workers" -> TODO()
                 }
             },

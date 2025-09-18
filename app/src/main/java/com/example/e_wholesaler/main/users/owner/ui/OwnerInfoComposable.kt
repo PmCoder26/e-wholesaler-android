@@ -2,7 +2,6 @@ package com.example.ui
 
 import android.annotation.SuppressLint
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,13 +44,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_wholesaler.auth.dtos.Gender
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
+import com.example.e_wholesaler.main.users.owner.ui.getIsPreview
+import com.example.e_wholesaler.main.users.owner.ui.getViewModelStoreOwner
 import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -89,10 +89,10 @@ fun OwnerInfoScreen(owner: OwnerDetails?) {
     // Fixes the preview render issues.
     // LocalInspectionMode helps detect if the composable is running in Preview.
     // This avoids crashes by skipping runtime-only code (ViewModels, DI, NavController) in Preview.
-    val isPreview = LocalInspectionMode.current
-    val navigationViewModel = if (!isPreview) {
+
+    val navigationViewModel = if (!getIsPreview()) {
         koinViewModel<NavigationViewModel>(
-            viewModelStoreOwner = LocalContext.current as ComponentActivity
+            viewModelStoreOwner = getViewModelStoreOwner()
         )
     } else null
 
@@ -128,8 +128,11 @@ fun OwnerInfoScreen(owner: OwnerDetails?) {
                             if (loggedOut) {
                                 navigationViewModel?.updateIsLoggedIn()
                                 navigationViewModel?.updateHasNavigated()
-                                navigationViewModel?.getController("MainController")
-                                    ?.popBackStack("LoginScreen", false)
+                                val navController =
+                                    navigationViewModel?.getController("MainController")
+                                navController?.navigate("LoginScreen") {
+                                    popUpTo(0) { inclusive = true }
+                                }
                             } else withContext(Dispatchers.Main) {
                                 Toast.makeText(
                                     context,

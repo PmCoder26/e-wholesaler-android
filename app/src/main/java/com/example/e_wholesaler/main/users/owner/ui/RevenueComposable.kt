@@ -1,7 +1,6 @@
 package com.example.e_wholesaler.main.users.owner.ui
 
 import android.annotation.SuppressLint
-import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,8 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -53,17 +50,15 @@ import org.koin.androidx.compose.koinViewModel
 @Preview(showBackground = true)
 @Composable
 fun RevenueScreen() {
-    val activity = LocalContext.current as ComponentActivity
-    val isPreview = LocalInspectionMode.current
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Revenue", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    val navigationViewModel = if (!isPreview) {
+                    val navigationViewModel = if (!getIsPreview()) {
                         koinViewModel<NavigationViewModel>(
-                            viewModelStoreOwner = activity
+                            viewModelStoreOwner = getViewModelStoreOwner()
                         )
                     } else null
                     IconButton(onClick = {
@@ -81,9 +76,9 @@ fun RevenueScreen() {
         },
     ) { paddingValues ->
 
-        val ownerViewModel = if (!isPreview) {
+        val ownerViewModel = if (!getIsPreview()) {
             koinViewModel<OwnerViewModel>(
-                viewModelStoreOwner = activity
+                viewModelStoreOwner = getViewModelStoreOwner()
             )
         } else null
         val totalShopRevenue = ownerViewModel?.totalRevenue?.collectAsState()?.value
@@ -155,7 +150,7 @@ fun FilterChips(ownerViewModel: OwnerViewModel?) {
                     "City" -> SortType.CITY
                     else -> SortType.REVENUE
                 }
-                ownerViewModel?.updateSortType(sortType)
+                ownerViewModel?.updateShopRevenueSortType(sortType)
             })
         }
     }

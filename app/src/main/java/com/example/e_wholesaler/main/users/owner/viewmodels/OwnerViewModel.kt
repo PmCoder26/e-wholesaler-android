@@ -10,6 +10,8 @@ import com.example.e_wholesaler.main.users.owner.dtos.DailyShopRevenue
 import com.example.e_wholesaler.main.users.owner.dtos.Details
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
+import com.example.e_wholesaler.main.users.owner.dtos.Shop
+import com.example.e_wholesaler.main.users.owner.dtos.ShopsState
 import com.example.e_wholesaler.main.users.owner.dtos.SortType
 import com.example.e_wholesaler.main.users.owner.dtos.TotalShopRevenue
 import kotlinx.coroutines.Dispatchers
@@ -28,23 +30,20 @@ class OwnerViewModel(
     private val OWNER_ID_KEY = longPreferencesKey("user_type_id")
 
     private var ownerId = MutableStateFlow<Long?>(null)
-    private var _ownerDetails = MutableStateFlow<OwnerDetails?>(null)
-    private var _homeDetails = MutableStateFlow<HomeScreenDetails?>(null)
-    private var _revenueDetails = MutableStateFlow(
+
+    private var ownerDetails = MutableStateFlow<OwnerDetails?>(null)
+    private var homeDetails = MutableStateFlow<HomeScreenDetails?>(null)
+    val detailsFlow = combine(homeDetails, ownerDetails) { homeDetails, ownerDetails ->
+        Details(homeDetails, ownerDetails)
+    }
+
+    private var shopRevenueSortType = MutableStateFlow(SortType.REVENUE)
+    private var revenueDetails = MutableStateFlow(
         TotalShopRevenue(
             emptyList(), 0.0, SortType.REVENUE
         )
     )
-    private var _sortType = MutableStateFlow(SortType.REVENUE)
-
-    private val _details = MutableStateFlow(Details(_homeDetails.value, _ownerDetails.value))
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
-
-    val detailsFlow = combine(_homeDetails, _ownerDetails, _details) { homeDetails, ownerDetails, details ->
-        details?.copy(homeDetails, ownerDetails)
-    }
-
-    val totalRevenue = combine(_revenueDetails, _sortType) { revenueDetails, sortType ->
+    val totalRevenue = combine(revenueDetails, shopRevenueSortType) { revenueDetails, sortType ->
         val sortedList = when (sortType) {
             SortType.REVENUE -> revenueDetails.dailyShopRevenueList.sortedByDescending { it -> it.dailyRevenue }
             SortType.NAME -> revenueDetails.dailyShopRevenueList.sortedBy { it -> it.shopName }
@@ -56,6 +55,18 @@ class OwnerViewModel(
             sortType = sortType
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
+
+    private var shopSortType = MutableStateFlow(SortType.NAME)
+    private var shopList = MutableStateFlow(emptyList<Shop>())
+
+    val shopsState = combine(shopList, shopSortType) { shopList, shopSortType ->
+        val sortedList = when (shopSortType) {
+            SortType.CITY -> shopList.sortedBy { it.city }
+            else -> shopList.sortedBy { it.name }
+        }
+        ShopsState(shops = sortedList, sortType = shopSortType)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), ShopsState())
+
 
     init {
         viewModelScope.launch {
@@ -72,7 +83,7 @@ class OwnerViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             ownerId.value?.let {
                 val homeScreenDetails = ownerClient.getHomeScreenDetails(it)
-                _homeDetails.value = homeScreenDetails
+                homeDetails.value = homeScreenDetails
             }
         }
     }
@@ -81,7 +92,7 @@ class OwnerViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             ownerId.value?.let {
                 val ownerDetails = ownerClient.getOwnerDetails(it)
-                _ownerDetails.value = ownerDetails
+                this@OwnerViewModel.ownerDetails.value = ownerDetails
             }
         }
     }
@@ -91,19 +102,36 @@ class OwnerViewModel(
             ownerId.value?.let {
                 val dailyShopRevenueList = ownerClient.getDailyRevenue(it)
                 dailyShopRevenueList?.let {
-                    _revenueDetails.value = TotalShopRevenue(
+                    revenueDetails.value = TotalShopRevenue(
                         dailyShopRevenueList = dailyShopRevenueList,
                         totalRevenue = dailyShopRevenueList.getTotalRevenue(),
-                        sortType = _sortType.value
+                        sortType = shopRevenueSortType.value
                     )
                 }
             }
         }
     }
 
-    fun updateSortType(sortType: SortType) {
+    fun updateShopRevenueSortType(sortType: SortType) {
         viewModelScope.launch(Dispatchers.Main) {
-            _sortType.value = sortType
+            shopRevenueSortType.value = sortType
+        }
+    }
+
+    fun getOwnerShops() {
+        viewModelScope.launch(Dispatchers.IO) {
+            ownerId.value?.let {
+                val shopList = ownerClient.getOwnerShops(it)
+                shopList?.let { shopList ->
+                    this@OwnerViewModel.shopList.value = shopList
+                }
+            }
+        }
+    }
+
+    fun updateShopSortType(sortType: SortType) {
+        viewModelScope.launch(Dispatchers.Main) {
+            shopSortType.value = sortType
         }
     }
 

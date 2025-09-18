@@ -16,6 +16,7 @@ import com.example.e_wholesaler.auth.LoginScreen
 import com.example.e_wholesaler.auth.SignUpScreen
 import com.example.e_wholesaler.auth.dtos.UserType
 import com.example.e_wholesaler.main.users.owner.ui.OwnerScreen
+import com.example.e_wholesaler.main.users.owner.ui.getViewModelStoreOwner
 import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.compose.koinViewModel
@@ -36,7 +37,7 @@ class MainActivity : ComponentActivity() {
             val navCon = rememberNavController()
             val tokenState by tokenManager.tokenState2.collectAsState()
             val navigationViewModel = koinViewModel<NavigationViewModel>(
-                viewModelStoreOwner = this
+                viewModelStoreOwner = getViewModelStoreOwner()
             )
             val navigationData by navigationViewModel.navigationData.collectAsState()
             val hasNavigated = navigationData.hasNavigatedFromLogin
