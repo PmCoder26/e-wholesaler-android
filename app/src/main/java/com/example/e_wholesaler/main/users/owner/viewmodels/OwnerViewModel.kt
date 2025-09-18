@@ -7,10 +7,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.e_wholesaler.main.users.owner.clients.OwnerClient
 import com.example.e_wholesaler.main.users.owner.dtos.DailyShopRevenue
-import com.example.e_wholesaler.main.users.owner.dtos.Details
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
+import com.example.e_wholesaler.main.users.owner.viewmodels.utils.Details
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.ShopsState
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.SortType
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.TotalShopRevenue
