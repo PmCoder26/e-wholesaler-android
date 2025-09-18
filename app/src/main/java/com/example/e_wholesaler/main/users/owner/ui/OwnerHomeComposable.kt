@@ -38,7 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -76,10 +75,12 @@ fun OwnerScreen() {
             viewModelStoreOwner = getViewModelStoreOwner()
         )
     } else null
-    val ownerViewModel = koinViewModel<OwnerViewModel>(
-        viewModelStoreOwner = getViewModelStoreOwner()
-    )
-    val details by ownerViewModel.detailsFlow.collectAsState(null)
+    val ownerViewModel = if (!getIsPreview()) {
+        koinViewModel<OwnerViewModel>(
+            viewModelStoreOwner = getViewModelStoreOwner()
+        )
+    } else null
+    val details = ownerViewModel?.detailsFlow?.collectAsState(null)?.value
 
     LaunchedEffect(Unit) {
         navigationViewModel?.addController("OwnerController", navCon)
@@ -89,7 +90,7 @@ fun OwnerScreen() {
         composable("OwnerHomeScreen") {
             OwnerHomeScreen(
                 navCon,
-                refreshStats = { ownerViewModel.getHomeScreenDetails() },
+                refreshStats = { ownerViewModel?.getHomeScreenDetails() },
                 details?.ownerDetails?.name.toString(),
                 details?.homeScreenDetails
             )
@@ -190,9 +191,11 @@ fun OwnerHomeScreen(navController: NavHostController, refreshStats: () -> Unit, 
                     viewModelStoreOwner = getViewModelStoreOwner()
                 )
             } else null
-            val ownerViewModel = koinViewModel<OwnerViewModel>(
-                viewModelStoreOwner = getViewModelStoreOwner()
-            )
+            val ownerViewModel = if (!getIsPreview()) {
+                koinViewModel<OwnerViewModel>(
+                    viewModelStoreOwner = getViewModelStoreOwner()
+                )
+            } else null
             // Stats Grid
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
