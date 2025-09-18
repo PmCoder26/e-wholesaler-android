@@ -11,9 +11,9 @@ import com.example.e_wholesaler.main.users.owner.dtos.Details
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
-import com.example.e_wholesaler.main.users.owner.dtos.ShopsState
-import com.example.e_wholesaler.main.users.owner.dtos.SortType
-import com.example.e_wholesaler.main.users.owner.dtos.TotalShopRevenue
+import com.example.e_wholesaler.main.users.owner.viewmodels.utils.ShopsState
+import com.example.e_wholesaler.main.users.owner.viewmodels.utils.SortType
+import com.example.e_wholesaler.main.users.owner.viewmodels.utils.TotalShopRevenue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

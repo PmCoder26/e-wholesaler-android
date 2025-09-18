@@ -40,8 +40,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_wholesaler.main.users.owner.dtos.DailyShopRevenue
-import com.example.e_wholesaler.main.users.owner.dtos.SortType
 import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
+import com.example.e_wholesaler.main.users.owner.viewmodels.utils.SortType
 import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
 import org.koin.androidx.compose.koinViewModel
 
