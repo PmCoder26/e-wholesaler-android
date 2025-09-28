@@ -10,6 +10,7 @@ import com.example.e_wholesaler.main.users.owner.dtos.DailyShopRevenue
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
+import com.example.e_wholesaler.main.users.owner.dtos.formatDateAndGet
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.Details
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.ShopsState
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.SortType
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class OwnerViewModel(
     private val ownerClient: OwnerClient,
@@ -73,7 +75,6 @@ class OwnerViewModel(
             // .first() gives the current snapshot of preferences instead of continuous updates.
             val pref = dataStore.data.first()
             ownerId.value = pref[OWNER_ID_KEY]
-            println("OwnerId: ${ownerId.value}")
             getHomeScreenDetails()
             getOwnerDetails()
         }
@@ -121,10 +122,9 @@ class OwnerViewModel(
     fun getOwnerShops() {
         viewModelScope.launch(Dispatchers.IO) {
             ownerId.value?.let {
-                val shopList = ownerClient.getOwnerShops(it)
-                shopList?.let { shopList ->
-                    this@OwnerViewModel.shopList.value = shopList
-                }
+                val shopListResponse = ownerClient.getOwnerShops(it)
+                    ?.map { it.formatDateAndGet() }
+                shopListResponse?.let { shopList.value = it }
             }
         }
     }
@@ -132,6 +132,31 @@ class OwnerViewModel(
     fun updateShopSortType(sortType: SortType) {
         viewModelScope.launch(Dispatchers.Main) {
             shopSortType.value = sortType
+        }
+    }
+
+    suspend fun getShopById(shopId: Long): Shop? {
+        return withContext(Dispatchers.IO) {
+            val shop = shopList.value
+                .find { it.id == shopId }
+            return@withContext shop
+        }
+    }
+
+    suspend fun updateShopDetails(shop: Shop): Boolean {
+        return withContext(Dispatchers.IO) {
+            ownerId.value?.let { ownerId ->
+                val updatedShop = ownerClient.updateShopDetails(ownerId, shop)
+                updatedShop?.let { updatedShop ->
+                    val newShopList = shopList.value
+                        .map {
+                            if (it.id == shop.id) updatedShop.formatDateAndGet() else it
+                        }
+                    shopList.value = newShopList
+                    return@withContext true
+                }
+            }
+            return@withContext false
         }
     }
 

@@ -1,6 +1,11 @@
 package com.example.e_wholesaler.main.users.owner.clients
 
 import android.util.Log
+import com.example.e_wholesaler.ktor_client.RequestType
+import com.example.e_wholesaler.ktor_client.RequestType.DELETE
+import com.example.e_wholesaler.ktor_client.RequestType.GET
+import com.example.e_wholesaler.ktor_client.RequestType.POST
+import com.example.e_wholesaler.ktor_client.RequestType.PUT
 import com.example.e_wholesaler.main.users.owner.dtos.DailyShopRevenue
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
@@ -8,8 +13,14 @@ import com.example.e_wholesaler.main.users.owner.dtos.Shop
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.HttpRequestBuilder
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import org.example.project.ktor_client.HOST_URL
 import org.parimal.auth.TokenManager
 import org.parimal.utils.ApiResponse
@@ -21,79 +32,65 @@ class OwnerClient(
 
     private val OWNER_BASE_URL = "http://$HOST_URL:8090/api/v1/shops/owner"
 
-    suspend fun getOwnerIdByMobileNumber(username: String): Long? {
-        val response = try {
-            httpClient.get(
-                urlString = "$OWNER_BASE_URL/$username/id"
-            ) {
-                authHeader()
-            }.body<ApiResponse<Long>>()
-        } catch (e: Exception) {
-            Log.e("Home screen details fetch error: ", e.message.toString())
-            null
-        }
-        return response?.data
-    }
-
     suspend fun getHomeScreenDetails(ownerId: Long): HomeScreenDetails? {
-        val response = try {
-            httpClient.get(
-                urlString = "$OWNER_BASE_URL/$ownerId/home"
-            ) {
-                authHeader()
-            }.body<ApiResponse<HomeScreenDetails>>()
-        } catch (e: Exception) {
-            generateLog("Home screen details fetch error: ", e)
-            null
-        }
-        return response?.data
+        return makeApiCall<HomeScreenDetails, Any>(ownerId, GET, "/home", null)
     }
 
     suspend fun getOwnerDetails(ownerId: Long): OwnerDetails? {
-        val response = try {
-            httpClient.get(
-                urlString = "$OWNER_BASE_URL/$ownerId"
-            ) {
-                authHeader()
-            }.body< ApiResponse<OwnerDetails>>()
-        } catch (e: Exception) {
-            generateLog("Owner details fetch error: ", e)
-            null
-        }
-        return response?.data
+        return makeApiCall<OwnerDetails, Any>(ownerId, GET, "", null)
     }
 
     suspend fun getDailyRevenue(ownerId: Long): List<DailyShopRevenue>? {
-        val response = try {
-            httpClient.get(
-                urlString = "$OWNER_BASE_URL/$ownerId/daily-revenue"
-            ) {
-                authHeader()
-            }.body<ApiResponse<List<DailyShopRevenue>>>()
-        } catch (e: Exception) {
-            generateLog("Owner daily revenue fetch error: ", e)
-            null
-        }
-        return response?.data
+        return makeApiCall<List<DailyShopRevenue>, Any>(ownerId, GET, "/daily-revenue", null)
     }
-
 
     suspend fun getOwnerShops(ownerId: Long): List<Shop>? {
-        val response = try {
-            httpClient.get(
-                urlString = "$OWNER_BASE_URL/$ownerId/shops"
-            ) {
-                authHeader()
-            }.body<ApiResponse<List<Shop>>>()
-        } catch (e: Exception) {
-            generateLog("Owner shops fetch error: ", e)
-            null
-        }
-        return response?.data
+        return makeApiCall<List<Shop>, Any>(ownerId, GET, "/shops", null)
     }
 
-    private fun generateLog(title: String, e: Exception) {
-        Log.e(title , e.message.toString())
+    suspend fun updateShopDetails(ownerId: Long, shop: Shop): Shop? {
+        return makeApiCall<Shop, Shop>(ownerId, PUT, "/shop", shop)
+    }
+
+    private suspend inline fun <reified ResponseType, reified RequestBodyType> makeApiCall(
+        ownerId: Long, requestType: RequestType, url: String, requestBody: RequestBodyType?
+    ): ResponseType? {
+        try {
+            val apiResponse = when (requestType) {
+                GET -> httpClient.get("$OWNER_BASE_URL/$ownerId$url") {
+                    requestBody?.let {
+                        contentType(ContentType.Application.Json)
+                        setBody(it)
+                    }
+                    authHeader()
+                }
+
+                POST -> httpClient.post("$OWNER_BASE_URL/$ownerId$url") {
+                    requestBody?.let {
+                        contentType(ContentType.Application.Json)
+                        setBody(it)
+                    }
+                    authHeader()
+                }
+
+                PUT -> httpClient.put("$OWNER_BASE_URL/$ownerId$url") {
+                    requestBody?.let {
+                        contentType(ContentType.Application.Json)
+                        setBody(it)
+                    }
+                    authHeader()
+                }
+
+                DELETE -> httpClient.delete("$OWNER_BASE_URL/$ownerId$url") {
+                    requestBody?.let { setBody(it) }
+                    authHeader()
+                }
+            }.body<ApiResponse<ResponseType>>()
+            return apiResponse.data
+        } catch (e: Exception) {
+            Log.e("Api call error: ", e.message.toString())
+            return null
+        }
     }
 
     private fun HttpRequestBuilder.authHeader() {

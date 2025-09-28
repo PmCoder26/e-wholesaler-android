@@ -1,7 +1,10 @@
 package com.example.e_wholesaler.main.users.owner.ui
 
 import android.annotation.SuppressLint
+import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.LocalActivity
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,9 +41,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -49,13 +56,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
+import com.example.e_wholesaler.main.users.owner.dtos.Shop
+import com.example.e_wholesaler.main.users.owner.dtos.hasDifferentData
+import com.example.e_wholesaler.main.users.owner.dtos.hasNoBlankField
 import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
 import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
 import com.example.ui.OwnerInfoScreen
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 
@@ -65,7 +78,9 @@ fun getViewModelStoreOwner() = LocalActivity.current as ViewModelStoreOwner
 @Composable
 fun getIsPreview() = LocalInspectionMode.current
 
-@SuppressLint("ContextCastToActivity")
+
+@RequiresApi(Build.VERSION_CODES.O)
+@SuppressLint("ContextCastToActivity", "ProduceStateDoesNotAssignValue")
 @Composable
 fun OwnerScreen() {
 
@@ -106,6 +121,67 @@ fun OwnerScreen() {
 
         composable("ShopsScreen") {
             ShopsScreen()
+        }
+        composable(
+            route = "ShopDetailsScreen/{shopId}",
+            arguments = listOf(
+                navArgument("shopId") { type = NavType.LongType }
+            )
+        ) {
+            val currentShopId = it.arguments?.getLong("shopId") ?: -1
+            val currentShop by produceState(initialValue = Shop(), currentShopId) {
+                value = ownerViewModel?.getShopById(currentShopId) ?: Shop()
+            }
+            val ownerController = navigationViewModel?.getController("OwnerController")
+
+            ShopDetailsScreen(
+                shopDetail = currentShop,
+                onBackClicked = { ownerController?.popBackStack() },
+                onEditDetailsClicked = { ownerController?.navigate("EditShopDetailsScreen/$currentShopId") }
+            )
+        }
+
+        composable(
+            route = "EditShopDetailsScreen/{shopId}",
+            arguments = listOf(
+                navArgument("shopId") { type = NavType.LongType }
+            )
+        ) {
+            val currentShopId = it.arguments?.getLong("shopId") ?: -1
+            val scope = rememberCoroutineScope()
+            val currentShop by produceState(initialValue = Shop(), currentShopId) {
+                value = ownerViewModel?.getShopById(currentShopId) ?: Shop()
+            }
+            val ownerController = navigationViewModel?.getController("OwnerController")
+            val context = LocalContext.current
+
+            EditShopDetailsScreen(
+                shop = currentShop,
+                onBackClicked = { ownerController?.popBackStack() },
+                onSaveClicked = { changedShop ->
+                    scope.launch {
+                        if (changedShop.hasNoBlankField() && changedShop.hasDifferentData(
+                                currentShop
+                            )
+                        ) {
+                            if (ownerViewModel?.updateShopDetails(changedShop) == true) {
+                                Toast.makeText(
+                                    context,
+                                    "Shop details edited successfully",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                ownerController?.popBackStack()
+                            }
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Please change or fill the shop details to proceed further",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+            )
         }
     }
 

@@ -1,5 +1,8 @@
 package com.example.e_wholesaler.main.users.owner.ui
 
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,19 +15,26 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -40,9 +50,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.e_wholesaler.R
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
 import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
@@ -65,7 +77,6 @@ val ButtonIconColor = TopBarBlue // Assuming button icons match top bar blue
 @Preview(showBackground = true)
 @Composable
 fun ShopsScreen() {
-    // Sample data representing the shops
 
     val ownerViewModel = if (!getIsPreview()) {
         koinViewModel<OwnerViewModel>(
@@ -203,7 +214,12 @@ fun ShopsScreen() {
                         ignoreCase = true
                     ) || it.city.contains(searchQuery, ignoreCase = true)
                 }) { shop ->
-                    ShopCard(shop = shop)
+                    ShopCard(
+                        shop = shop,
+                        onClick = {
+                            navigationViewModel?.getController("OwnerController")
+                                ?.navigate("ShopDetailsScreen/${shop.id}")
+                        })
                 }
             }
         }
@@ -212,10 +228,11 @@ fun ShopsScreen() {
 
 // Composable for displaying a single shop item in a Card
 @Composable
-fun ShopCard(shop: Shop) {
+fun ShopCard(shop: Shop, onClick: () -> Unit) {
     Card(
         modifier = Modifier
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp), // Basic rounded corners for card
         colors = CardDefaults.cardColors(
             CardBackgroundWhite
@@ -236,4 +253,310 @@ fun ShopCard(shop: Shop) {
             )
         }
     }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Preview(showBackground = true)
+@Composable
+fun ShopDetailsScreenPreview() {
+    val sampleShopDetail = Shop(
+        id = 0,
+        name = "Sagar Traders",
+        gstNo = "27AADCUSTOMER1Z5",
+        createdAt = "March 15, 2024",
+        address = "Shop No. 42, Ganesh Market, M.G. Road, Borivali West",
+        city = "Mumbai",
+        state = "Maharashtra"
+    )
+    // You might need to provide a MaterialTheme wrapper if not already present in your previews
+    ShopDetailsScreen(
+        shopDetail = sampleShopDetail,
+        onBackClicked = { /* Preview action */ },
+        onEditDetailsClicked = { /* Preview action */ }
+    )
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ShopDetailsScreen(
+    shopDetail: Shop,
+    onBackClicked: () -> Unit,
+    onEditDetailsClicked: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Shop Details", color = IconColorWhite) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClicked) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = IconColorWhite
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = TopBarBlue)
+            )
+        },
+        containerColor = BackgroundLightBlue,
+        bottomBar = {
+            ExtendedFloatingActionButton(
+                onClick = onEditDetailsClicked,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .height(50.dp),
+                containerColor = TopBarBlue,
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Edit Details", color = Color.White, fontSize = 18.sp)
+            }
+        }
+    ) { paddingValues ->
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
+            // Shop Info Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = CardBackgroundWhite),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = shopDetail.name,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row {
+                        Text("GST Number: ", fontSize = 14.sp, color = TextSecondary)
+                        Text(
+                            shopDetail.gstNo,
+                            fontSize = 14.sp,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row {
+                        Text("Added: ", fontSize = 14.sp, color = TextSecondary)
+                        Text(shopDetail.createdAt, fontSize = 14.sp, color = TextPrimary)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Location Details Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = CardBackgroundWhite),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Location Details",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Address",
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                    Text(
+                        text = shopDetail.address,
+                        fontSize = 14.sp,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "City",
+                                style = TextStyle(
+                                    fontSize = 16.sp,
+                                    color = TextSecondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                            Text(shopDetail.city, fontSize = 14.sp, color = TextPrimary)
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "State",
+                                style = TextStyle(
+                                    fontSize = 16.sp,
+                                    color = TextSecondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                            Text(shopDetail.state, fontSize = 14.sp, color = TextPrimary)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun EditShopDetailsScreenPreview() {
+    val sampleShop = Shop(
+        id = 1,
+        name = "Sagar Traders",
+        gstNo = "27AADCUSTOMER1Z5",
+        createdAt = "March 15, 2024", // This field is not editable in this screen
+        address = "Shop No. 42, Ganesh Market, M.G. Road, Borivali West",
+        city = "Mumbai",
+        state = "Maharashtra"
+    )
+    MaterialTheme { // Assuming you have a MaterialTheme wrapper for previews
+        EditShopDetailsScreen(
+            shop = sampleShop,
+            onSaveClicked = { /* Preview action */ },
+            onBackClicked = { /* Preview action */ }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditShopDetailsScreen(
+    shop: Shop,
+    onSaveClicked: (Shop) -> Unit,
+    onBackClicked: () -> Unit
+) {
+    var name by remember(shop.name) { mutableStateOf(shop.name) }
+    var gstNo by remember(shop.gstNo) { mutableStateOf(shop.gstNo) }
+    var address by remember(shop.address) { mutableStateOf(shop.address) }
+    var city by remember(shop.city) { mutableStateOf(shop.city) }
+    var state by remember(shop.state) { mutableStateOf(shop.state) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Edit Shop Details", color = IconColorWhite) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClicked) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = IconColorWhite
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = TopBarBlue)
+            )
+        },
+        containerColor = BackgroundLightBlue,
+        bottomBar = {
+            Button(
+                onClick = {
+                    val updatedShop = shop.copy(
+                        name = name,
+                        gstNo = gstNo,
+                        address = address,
+                        city = city,
+                        state = state
+                    )
+                    onSaveClicked(updatedShop)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = TopBarBlue),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Save Changes", color = Color.White, fontSize = 16.sp)
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp, vertical = 8.dp) // Adjusted padding for scroll
+                .verticalScroll(rememberScrollState()) // Enable scrolling for form
+        ) {
+            EditTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = "Shop Name"
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            EditTextField(
+                value = gstNo,
+                onValueChange = { gstNo = it },
+                label = "GST Number"
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            EditTextField(
+                value = address,
+                onValueChange = { address = it },
+                label = "Address",
+                singleLine = false,
+                minLines = 3
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            EditTextField(
+                value = city,
+                onValueChange = { city = it },
+                label = "City"
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            EditTextField(
+                value = state,
+                onValueChange = { state = it },
+                label = "State"
+            )
+            Spacer(modifier = Modifier.height(16.dp)) // Space before bottom bar takes over
+        }
+    }
+}
+
+@Composable
+private fun EditTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    singleLine: Boolean = true,
+    minLines: Int = 1,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label, color = TextSecondary) },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = singleLine,
+        minLines = minLines,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = TopBarBlue,
+            unfocusedBorderColor = IconColorGray,
+            cursorColor = TopBarBlue,
+            focusedTextColor = TextPrimary,
+            unfocusedTextColor = TextPrimary,
+            focusedContainerColor = CardBackgroundWhite,
+            unfocusedContainerColor = CardBackgroundWhite,
+            disabledContainerColor = CardBackgroundWhite,
+        ),
+        shape = RoundedCornerShape(8.dp)
+    )
 }
