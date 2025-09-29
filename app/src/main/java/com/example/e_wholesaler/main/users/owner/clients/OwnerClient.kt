@@ -52,6 +52,10 @@ class OwnerClient(
         return makeApiCall<Shop, Shop>(ownerId, PUT, "/shop", shop)
     }
 
+    suspend fun addNewShop(ownerId: Long, newShop: Shop): Shop? {
+        return makeApiCall<Shop, Shop>(ownerId, POST, "/shop", newShop)
+    }
+
     private suspend inline fun <reified ResponseType, reified RequestBodyType> makeApiCall(
         ownerId: Long, requestType: RequestType, url: String, requestBody: RequestBodyType?
     ): ResponseType? {

@@ -68,6 +68,7 @@ import com.example.e_wholesaler.main.users.owner.dtos.hasNoBlankField
 import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
 import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
 import com.example.ui.OwnerInfoScreen
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -90,12 +91,15 @@ fun OwnerScreen() {
             viewModelStoreOwner = getViewModelStoreOwner()
         )
     } else null
+    val ownerController = navigationViewModel?.getController("OwnerController")
     val ownerViewModel = if (!getIsPreview()) {
         koinViewModel<OwnerViewModel>(
             viewModelStoreOwner = getViewModelStoreOwner()
         )
     } else null
     val details = ownerViewModel?.detailsFlow?.collectAsState(null)?.value
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         navigationViewModel?.addController("OwnerController", navCon)
@@ -132,7 +136,6 @@ fun OwnerScreen() {
             val currentShop by produceState(initialValue = Shop(), currentShopId) {
                 value = ownerViewModel?.getShopById(currentShopId) ?: Shop()
             }
-            val ownerController = navigationViewModel?.getController("OwnerController")
 
             ShopDetailsScreen(
                 shopDetail = currentShop,
@@ -148,18 +151,15 @@ fun OwnerScreen() {
             )
         ) {
             val currentShopId = it.arguments?.getLong("shopId") ?: -1
-            val scope = rememberCoroutineScope()
             val currentShop by produceState(initialValue = Shop(), currentShopId) {
                 value = ownerViewModel?.getShopById(currentShopId) ?: Shop()
             }
-            val ownerController = navigationViewModel?.getController("OwnerController")
-            val context = LocalContext.current
 
             EditShopDetailsScreen(
                 shop = currentShop,
                 onBackClicked = { ownerController?.popBackStack() },
                 onSaveClicked = { changedShop ->
-                    scope.launch {
+                    scope.launch(Dispatchers.Main) {
                         if (changedShop.hasNoBlankField() && changedShop.hasDifferentData(
                                 currentShop
                             )
@@ -183,20 +183,58 @@ fun OwnerScreen() {
                 }
             )
         }
+
+        composable("AddShopScreen") {
+            AddShopScreen(
+                onCancelClicked = { ownerController?.popBackStack() },
+                onSaveClicked = { newShop ->
+                    scope.launch(Dispatchers.Main) {
+                        if (newShop.hasNoBlankField()) {
+                            if (ownerViewModel?.addNewShop(newShop) == true) {
+                                Toast.makeText(
+                                    context,
+                                    "New shop added successfully",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                ownerController?.popBackStack()
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    "Unable to add the new shop",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Please fill all the shop details",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+            )
+        }
     }
 
 }
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Preview(showBackground = true)
 @Composable
 fun OwnerHomeScreenPreview() {
     OwnerHomeScreen(rememberNavController(), {}, "null", null)
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @SuppressLint("ContextCastToActivity")
 @Composable
-fun OwnerHomeScreen(navController: NavHostController, refreshStats: () -> Unit, ownerName: String, homeScreenDetails: HomeScreenDetails?) {
+fun OwnerHomeScreen(
+    navController: NavHostController,
+    refreshStats: () -> Unit, ownerName: String,
+    homeScreenDetails: HomeScreenDetails?
+) {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -305,6 +343,7 @@ fun getOwnerStats(homeScreenDetails: HomeScreenDetails?): List<OwnerStat> =  lis
 )
 
 // Stat Card UI
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun StatCard(
     stat: OwnerStat,

@@ -1,5 +1,7 @@
 package com.example.e_wholesaler.main.users.owner.viewmodels
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -119,6 +121,7 @@ class OwnerViewModel(
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun getOwnerShops() {
         viewModelScope.launch(Dispatchers.IO) {
             ownerId.value?.let {
@@ -143,6 +146,7 @@ class OwnerViewModel(
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     suspend fun updateShopDetails(shop: Shop): Boolean {
         return withContext(Dispatchers.IO) {
             ownerId.value?.let { ownerId ->
@@ -152,6 +156,23 @@ class OwnerViewModel(
                         .map {
                             if (it.id == shop.id) updatedShop.formatDateAndGet() else it
                         }
+                    shopList.value = newShopList
+                    return@withContext true
+                }
+            }
+            return@withContext false
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    suspend fun addNewShop(newShop: Shop): Boolean {
+        return withContext(Dispatchers.IO) {
+            ownerId.value?.let { ownerId ->
+                val addedShop = ownerClient.addNewShop(ownerId, newShop)
+                addedShop?.let { addedShop ->
+                    val newShopList = shopList.value
+                        .toMutableList()
+                    newShopList.add(addedShop.formatDateAndGet())
                     shopList.value = newShopList
                     return@withContext true
                 }
