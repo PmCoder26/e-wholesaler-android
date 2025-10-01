@@ -61,9 +61,7 @@ class MainActivity : ComponentActivity() {
                     if (isLoggedIn && !hasNavigated) {
                         navigationViewModel.updateHasNavigated()
                         when (tokenState.userType) {
-                            UserType.OWNER -> {
-                                navCon.navigate("OwnerScreen")
-                            }
+                            UserType.OWNER -> navCon.navigate("OwnerScreen")
                             UserType.WORKER -> TODO()
                             UserType.CUSTOMER -> TODO()
                             UserType.NONE -> TODO()

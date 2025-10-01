@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class NavigationViewModel : ViewModel() {
+open class NavigationViewModel : ViewModel() {
 
     private var navHostControllerMap: MutableMap<String, NavHostController> = mutableMapOf()
     private var hasNavigatedFromLogin = MutableStateFlow(false)
@@ -44,3 +44,5 @@ class NavigationViewModel : ViewModel() {
     }
 
 }
+
+class NullNavigationViewModel() : NavigationViewModel()

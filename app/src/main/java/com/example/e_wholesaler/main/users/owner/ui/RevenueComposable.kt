@@ -1,6 +1,8 @@
 package com.example.e_wholesaler.main.users.owner.ui
 
 import android.annotation.SuppressLint
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +33,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,11 +43,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_wholesaler.main.users.owner.dtos.DailyShopRevenue
+import com.example.e_wholesaler.main.users.owner.viewmodels.NullOwnerViewModel
 import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
-import com.example.e_wholesaler.main.users.owner.viewmodels.utils.SortType
+import com.example.e_wholesaler.main.users.owner.viewmodels.utils.ShopSortType
 import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
 import org.koin.androidx.compose.koinViewModel
 
+@RequiresApi(Build.VERSION_CODES.O)
 @SuppressLint("ContextCastToActivity")
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
@@ -80,8 +85,8 @@ fun RevenueScreen() {
             koinViewModel<OwnerViewModel>(
                 viewModelStoreOwner = getViewModelStoreOwner()
             )
-        } else null
-        val totalShopRevenue = ownerViewModel?.totalRevenue?.collectAsState()?.value
+        } else NullOwnerViewModel()
+        val totalShopRevenue by ownerViewModel.totalRevenue.collectAsState()
 
         Column(
             modifier = Modifier
@@ -137,6 +142,7 @@ fun SearchBar() {
     )
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun FilterChips(ownerViewModel: OwnerViewModel?) {
     LazyRow(
@@ -146,9 +152,9 @@ fun FilterChips(ownerViewModel: OwnerViewModel?) {
         items(listOf("Name", "City", "Revenue")) {
             FilterChip(it, updateFilter = {
                 val sortType = when (it) {
-                    "Name" -> SortType.NAME
-                    "City" -> SortType.CITY
-                    else -> SortType.REVENUE
+                    "Name" -> ShopSortType.NAME
+                    "City" -> ShopSortType.CITY
+                    else -> ShopSortType.REVENUE
                 }
                 ownerViewModel?.updateShopRevenueSortType(sortType)
             })

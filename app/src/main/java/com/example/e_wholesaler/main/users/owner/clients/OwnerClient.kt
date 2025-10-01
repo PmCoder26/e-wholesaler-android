@@ -9,6 +9,7 @@ import com.example.e_wholesaler.ktor_client.RequestType.PUT
 import com.example.e_wholesaler.main.users.owner.dtos.DailyShopRevenue
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
+import com.example.e_wholesaler.main.users.owner.dtos.Product
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -54,6 +55,10 @@ class OwnerClient(
 
     suspend fun addNewShop(ownerId: Long, newShop: Shop): Shop? {
         return makeApiCall<Shop, Shop>(ownerId, POST, "/shop", newShop)
+    }
+
+    suspend fun getShopProducts(ownerId: Long, shopId: Long): MutableList<Product>? {
+        return makeApiCall<MutableList<Product>, Any>(ownerId, GET, "/shop/$shopId/products", null)
     }
 
     private suspend inline fun <reified ResponseType, reified RequestBodyType> makeApiCall(

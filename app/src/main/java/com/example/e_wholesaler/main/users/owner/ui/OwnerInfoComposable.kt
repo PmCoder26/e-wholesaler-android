@@ -53,6 +53,7 @@ import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 import com.example.e_wholesaler.main.users.owner.ui.getIsPreview
 import com.example.e_wholesaler.main.users.owner.ui.getViewModelStoreOwner
 import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
+import com.example.e_wholesaler.navigation_viewmodel.NullNavigationViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -94,7 +95,7 @@ fun OwnerInfoScreen(owner: OwnerDetails?) {
         koinViewModel<NavigationViewModel>(
             viewModelStoreOwner = getViewModelStoreOwner()
         )
-    } else null
+    } else NullNavigationViewModel()
 
     Scaffold(
         topBar = {
@@ -102,7 +103,7 @@ fun OwnerInfoScreen(owner: OwnerDetails?) {
                 title = { Text("Information Dashboard", color = Color.White, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(onClick = {
-                        navigationViewModel?.getController("OwnerController")?.popBackStack()
+                        navigationViewModel.getController("OwnerController")?.popBackStack()
                     }) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
@@ -126,10 +127,10 @@ fun OwnerInfoScreen(owner: OwnerDetails?) {
                             val authClient by inject<AuthClient>(AuthClient::class.java)
                             val loggedOut = authClient.logout()
                             if (loggedOut) {
-                                navigationViewModel?.updateIsLoggedIn()
-                                navigationViewModel?.updateHasNavigated()
+                                navigationViewModel.updateIsLoggedIn()
+                                navigationViewModel.updateHasNavigated()
                                 val navController =
-                                    navigationViewModel?.getController("MainController")
+                                    navigationViewModel.getController("MainController")
                                 navController?.navigate("LoginScreen") {
                                     popUpTo(0) { inclusive = true }
                                 }

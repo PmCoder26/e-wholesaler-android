@@ -15,10 +15,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.example.project.ktor_client.HOST_URL
@@ -48,22 +45,6 @@ class TokenManager(
         userTypeId.value
     ))
 
-    private val tokenState = combine(
-            accessToken, refreshToken, userType, userTypeId, _state
-        ) { accessToken, refreshToken, userType, userTypeId, _state ->
-            _state.copy(
-                accessToken = accessToken,
-                refreshToken = refreshToken,
-                userType = userType,
-                userTypeId = userTypeId
-            )
-        }.stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(),
-            TokenState(
-                accessToken.value, refreshToken.value, userType.value, userTypeId.value
-            )
-        )
     val tokenState2 = _state
 
 
@@ -142,9 +123,6 @@ class TokenManager(
                     userTypeId = data.userTypeId
                 )
             )
-        }
-        response?.error?.let { error ->
-            println("Token refresh response error: ${error.message}")
         }
     }
 

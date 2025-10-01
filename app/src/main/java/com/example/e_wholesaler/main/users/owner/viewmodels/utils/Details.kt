@@ -4,6 +4,6 @@ import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 
 data class Details(
-    val homeScreenDetails: HomeScreenDetails?,
-    val ownerDetails: OwnerDetails?
+    val homeScreenDetails: HomeScreenDetails? = null,
+    val ownerDetails: OwnerDetails? = null
 )

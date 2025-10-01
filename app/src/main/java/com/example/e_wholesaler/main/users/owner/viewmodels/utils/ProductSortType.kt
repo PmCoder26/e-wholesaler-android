@@ -1,7 +1,7 @@
 package com.example.e_wholesaler.main.users.owner.viewmodels.utils
 
-enum class SortType {
+enum class ProductSortType {
     NAME,
-    CITY,
-    REVENUE
+    COMPANY,
+    CATEGORY
 }

@@ -65,9 +65,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_wholesaler.R
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
+import com.example.e_wholesaler.main.users.owner.viewmodels.NullOwnerViewModel
 import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
-import com.example.e_wholesaler.main.users.owner.viewmodels.utils.SortType
+import com.example.e_wholesaler.main.users.owner.viewmodels.utils.ShopSortType
 import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
+import com.example.e_wholesaler.navigation_viewmodel.NullNavigationViewModel
 import org.koin.androidx.compose.koinViewModel
 
 
@@ -92,6 +94,7 @@ val indianStates = listOf(
 )
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
@@ -101,14 +104,14 @@ fun ShopsScreen() {
         koinViewModel<OwnerViewModel>(
             viewModelStoreOwner = getViewModelStoreOwner()
         )
-    } else null
+    } else NullOwnerViewModel()
     val navigationViewModel = if (!getIsPreview()) {
         koinViewModel<NavigationViewModel>(
             viewModelStoreOwner = getViewModelStoreOwner()
         )
-    } else null
-    val shopsState = ownerViewModel?.shopsState?.collectAsState()?.value
-    val shops = shopsState?.shops ?: emptyList()
+    } else NullNavigationViewModel()
+    val shopsState by ownerViewModel.shopsState.collectAsState()
+    val shops = shopsState.shops
     var searchQuery by remember { mutableStateOf("") }
 
     Scaffold(
@@ -118,7 +121,7 @@ fun ShopsScreen() {
                 navigationIcon = {
                     IconButton(
                         onClick = {
-                            navigationViewModel?.getController("OwnerController")?.popBackStack()
+                            navigationViewModel.getController("OwnerController")?.popBackStack()
                         }
                     ) {
                         Icon(
@@ -130,7 +133,7 @@ fun ShopsScreen() {
                 },
                 actions = {
                     IconButton(onClick = {
-                        navigationViewModel?.getController("OwnerController")
+                        navigationViewModel.getController("OwnerController")
                             ?.navigate("AddShopScreen")
                     }) {
                         Icon(
@@ -185,7 +188,7 @@ fun ShopsScreen() {
                 // Name Filter Button
                 OutlinedButton(
                     onClick = {
-                        ownerViewModel?.updateShopSortType(SortType.NAME)
+                        ownerViewModel.updateShopSortType(ShopSortType.NAME)
                     },
                     modifier = Modifier.weight(1f), // Make buttons share width equally
                     colors = ButtonDefaults.outlinedButtonColors(
@@ -206,7 +209,7 @@ fun ShopsScreen() {
                 // City Filter Button
                 OutlinedButton(
                     onClick = {
-                        ownerViewModel?.updateShopSortType(SortType.CITY)
+                        ownerViewModel.updateShopSortType(ShopSortType.CITY)
                     },
                     modifier = Modifier.weight(1f), // Make buttons share width equally
                     colors = ButtonDefaults.outlinedButtonColors(
@@ -239,7 +242,7 @@ fun ShopsScreen() {
                     ShopCard(
                         shop = shop,
                         onClick = {
-                            navigationViewModel?.getController("OwnerController")
+                            navigationViewModel.getController("OwnerController")
                                 ?.navigate("ShopDetailsScreen/${shop.id}")
                         })
                 }

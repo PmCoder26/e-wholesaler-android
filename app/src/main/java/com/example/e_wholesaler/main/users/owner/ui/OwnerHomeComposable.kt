@@ -42,8 +42,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -65,8 +68,11 @@ import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
 import com.example.e_wholesaler.main.users.owner.dtos.hasDifferentData
 import com.example.e_wholesaler.main.users.owner.dtos.hasNoBlankField
+import com.example.e_wholesaler.main.users.owner.viewmodels.NullOwnerViewModel
 import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
+import com.example.e_wholesaler.main.users.owner.viewmodels.utils.Details
 import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
+import com.example.e_wholesaler.navigation_viewmodel.NullNavigationViewModel
 import com.example.ui.OwnerInfoScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -90,33 +96,36 @@ fun OwnerScreen() {
         koinViewModel<NavigationViewModel>(
             viewModelStoreOwner = getViewModelStoreOwner()
         )
-    } else null
-    val ownerController = navigationViewModel?.getController("OwnerController")
+    } else NullNavigationViewModel()
     val ownerViewModel = if (!getIsPreview()) {
         koinViewModel<OwnerViewModel>(
             viewModelStoreOwner = getViewModelStoreOwner()
         )
-    } else null
-    val details = ownerViewModel?.detailsFlow?.collectAsState(null)?.value
+    } else NullOwnerViewModel()
+    val details by ownerViewModel.detailsFlow.collectAsState(Details())
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        navigationViewModel?.addController("OwnerController", navCon)
+        navigationViewModel.addController("OwnerController", navCon)
     }
 
     NavHost(navController = navCon, startDestination = "OwnerHomeScreen") {
         composable("OwnerHomeScreen") {
             OwnerHomeScreen(
                 navCon,
-                refreshStats = { ownerViewModel?.getHomeScreenDetails() },
-                details?.ownerDetails?.name.toString(),
-                details?.homeScreenDetails
+                refreshStats = {
+                    scope.launch(Dispatchers.Main) {
+                        ownerViewModel.getHomeScreenDetails()
+                    }
+                },
+                details.ownerDetails?.name.toString(),
+                details.homeScreenDetails
             )
         }
 
         composable("OwnerInfoScreen") {
-            OwnerInfoScreen(details?.ownerDetails)
+            OwnerInfoScreen(details.ownerDetails)
         }
 
         composable("RevenueScreen") {
@@ -126,6 +135,7 @@ fun OwnerScreen() {
         composable("ShopsScreen") {
             ShopsScreen()
         }
+
         composable(
             route = "ShopDetailsScreen/{shopId}",
             arguments = listOf(
@@ -134,13 +144,13 @@ fun OwnerScreen() {
         ) {
             val currentShopId = it.arguments?.getLong("shopId") ?: -1
             val currentShop by produceState(initialValue = Shop(), currentShopId) {
-                value = ownerViewModel?.getShopById(currentShopId) ?: Shop()
+                value = ownerViewModel.getShopById(currentShopId) ?: Shop()
             }
 
             ShopDetailsScreen(
                 shopDetail = currentShop,
-                onBackClicked = { ownerController?.popBackStack() },
-                onEditDetailsClicked = { ownerController?.navigate("EditShopDetailsScreen/$currentShopId") }
+                onBackClicked = { navCon.popBackStack() },
+                onEditDetailsClicked = { navCon.navigate("EditShopDetailsScreen/$currentShopId") }
             )
         }
 
@@ -152,25 +162,25 @@ fun OwnerScreen() {
         ) {
             val currentShopId = it.arguments?.getLong("shopId") ?: -1
             val currentShop by produceState(initialValue = Shop(), currentShopId) {
-                value = ownerViewModel?.getShopById(currentShopId) ?: Shop()
+                value = ownerViewModel.getShopById(currentShopId) ?: Shop()
             }
 
             EditShopDetailsScreen(
                 shop = currentShop,
-                onBackClicked = { ownerController?.popBackStack() },
+                onBackClicked = { navCon.popBackStack() },
                 onSaveClicked = { changedShop ->
                     scope.launch(Dispatchers.Main) {
                         if (changedShop.hasNoBlankField() && changedShop.hasDifferentData(
                                 currentShop
                             )
                         ) {
-                            if (ownerViewModel?.updateShopDetails(changedShop) == true) {
+                            if (ownerViewModel.updateShopDetails(changedShop)) {
                                 Toast.makeText(
                                     context,
                                     "Shop details edited successfully",
                                     Toast.LENGTH_SHORT
                                 ).show()
-                                ownerController?.popBackStack()
+                                navCon.popBackStack()
                             }
                         } else {
                             Toast.makeText(
@@ -186,17 +196,17 @@ fun OwnerScreen() {
 
         composable("AddShopScreen") {
             AddShopScreen(
-                onCancelClicked = { ownerController?.popBackStack() },
+                onCancelClicked = { navCon.popBackStack() },
                 onSaveClicked = { newShop ->
                     scope.launch(Dispatchers.Main) {
                         if (newShop.hasNoBlankField()) {
-                            if (ownerViewModel?.addNewShop(newShop) == true) {
+                            if (ownerViewModel.addNewShop(newShop)) {
                                 Toast.makeText(
                                     context,
                                     "New shop added successfully",
                                     Toast.LENGTH_SHORT
                                 ).show()
-                                ownerController?.popBackStack()
+                                navCon.popBackStack()
                             } else {
                                 Toast.makeText(
                                     context,
@@ -213,6 +223,21 @@ fun OwnerScreen() {
                         }
                     }
                 }
+            )
+        }
+
+        composable("ShopProductsScreen") {
+            val shopsState by ownerViewModel.shopsState.collectAsState()
+            val shopProductsState by ownerViewModel.shopProductsState.collectAsState()
+
+            ShopProductsScreen(
+                shops = shopsState.shops,
+                initialSelectedShop = shopsState.shops.firstOrNull(),
+                products = shopProductsState.products,
+                onBackClicked = { navCon.popBackStack() },
+                onShopSelected = { ownerViewModel.getShopProducts(it) },
+                onAddProductClicked = {},
+                onFilterChange = { ownerViewModel.updateProductSortType(it) }
             )
         }
     }
@@ -309,7 +334,7 @@ fun OwnerHomeScreen(
                 koinViewModel<OwnerViewModel>(
                     viewModelStoreOwner = getViewModelStoreOwner()
                 )
-            } else null
+            } else NullOwnerViewModel()
             // Stats Grid
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
@@ -364,7 +389,6 @@ fun StatCard(
 
                     "Active Orders" -> TODO()
                     "Total Shops" -> {
-                        ownerViewModel?.getOwnerShops()
                         navController?.navigate("ShopsScreen")
                     }
 
@@ -413,21 +437,29 @@ fun StatCard(
 // Bottom Navigation Bar
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
-    NavigationBar(
-        containerColor = Color.White
-    ) {
-        val items = listOf("Home", "Products", "Workers", "Orders")
-        val icons = listOf(
-            Icons.Default.Home,
-            Icons.AutoMirrored.Filled.List,
-            Icons.Default.Person,
-            Icons.Default.ShoppingCart
-        )
+    var selectedIndex by remember { mutableIntStateOf(0) }
 
+    val items = listOf("Home", "Products", "Workers", "Orders")
+    val icons = listOf(
+        Icons.Default.Home,
+        Icons.AutoMirrored.Filled.List,
+        Icons.Default.Person,
+        Icons.Default.ShoppingCart
+    )
+
+    NavigationBar(containerColor = Color.White) {
         items.forEachIndexed { index, item ->
             NavigationBarItem(
-                selected = index == 0, // Default to Home selected
-                onClick = { /* Handle navigation */ },
+                selected = index == selectedIndex,
+                onClick = {
+                    selectedIndex = index
+                    when (item) {
+                        "Home" -> navController.navigate("HomeScreen")
+                        "Products" -> navController.navigate("ShopProductsScreen")
+                        "Workers" -> navController.navigate("WorkersScreen")
+                        "Orders" -> navController.navigate("OrdersScreen")
+                    }
+                },
                 icon = { Icon(imageVector = icons[index], contentDescription = item) },
                 label = { Text(item) }
             )
