@@ -24,11 +24,11 @@ val appModule: Module = module {
     }
 
     single() {
-        createHttpClient(OkHttp.create())
+        createHttpClient(OkHttp.create(), get())
     }
 
     single() {
-        TokenManager(get(), get())
+        TokenManager(get())
     }
 
     single() {

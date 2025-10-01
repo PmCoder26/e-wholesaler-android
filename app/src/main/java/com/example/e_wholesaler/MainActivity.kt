@@ -16,7 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.e_wholesaler.auth.LoginScreen
 import com.example.e_wholesaler.auth.SignUpScreen
-import com.example.e_wholesaler.auth.dtos.UserType
+import com.example.e_wholesaler.auth.utils.UserType
 import com.example.e_wholesaler.main.users.owner.ui.OwnerScreen
 import com.example.e_wholesaler.main.users.owner.ui.getViewModelStoreOwner
 import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel

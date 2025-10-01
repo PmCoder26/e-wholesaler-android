@@ -13,23 +13,17 @@ import com.example.e_wholesaler.main.users.owner.dtos.Product
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
-import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import org.example.project.ktor_client.HOST_URL
-import org.parimal.auth.TokenManager
 import org.parimal.utils.ApiResponse
 
-class OwnerClient(
-    private val httpClient: HttpClient,
-    private val tokenManager: TokenManager
-) {
+class OwnerClient(private val httpClient: HttpClient) {
 
     private val OWNER_BASE_URL = "http://$HOST_URL:8090/api/v1/shops/owner"
 
@@ -71,7 +65,6 @@ class OwnerClient(
                         contentType(ContentType.Application.Json)
                         setBody(it)
                     }
-                    authHeader()
                 }
 
                 POST -> httpClient.post("$OWNER_BASE_URL/$ownerId$url") {
@@ -79,7 +72,6 @@ class OwnerClient(
                         contentType(ContentType.Application.Json)
                         setBody(it)
                     }
-                    authHeader()
                 }
 
                 PUT -> httpClient.put("$OWNER_BASE_URL/$ownerId$url") {
@@ -87,12 +79,10 @@ class OwnerClient(
                         contentType(ContentType.Application.Json)
                         setBody(it)
                     }
-                    authHeader()
                 }
 
                 DELETE -> httpClient.delete("$OWNER_BASE_URL/$ownerId$url") {
                     requestBody?.let { setBody(it) }
-                    authHeader()
                 }
             }.body<ApiResponse<ResponseType>>()
             return apiResponse.data
@@ -100,10 +90,6 @@ class OwnerClient(
             Log.e("Api call error: ", e.message.toString())
             return null
         }
-    }
-
-    private fun HttpRequestBuilder.authHeader() {
-        header("Authorization", "${tokenManager.tokenState2.value.accessToken}")
     }
 
 }

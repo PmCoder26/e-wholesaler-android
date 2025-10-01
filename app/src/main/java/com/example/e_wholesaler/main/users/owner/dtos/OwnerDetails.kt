@@ -1,6 +1,6 @@
 package com.example.e_wholesaler.main.users.owner.dtos
 
-import com.example.e_wholesaler.auth.dtos.Gender
+import com.example.e_wholesaler.auth.utils.Gender
 import kotlinx.serialization.Serializable
 
 

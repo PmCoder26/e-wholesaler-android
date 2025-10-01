@@ -48,7 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.e_wholesaler.auth.dtos.Gender
+import com.example.e_wholesaler.auth.utils.Gender
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 import com.example.e_wholesaler.main.users.owner.ui.getIsPreview
 import com.example.e_wholesaler.main.users.owner.ui.getViewModelStoreOwner

@@ -1,7 +1,7 @@
 package org.parimal.auth.dtos
 
-import com.example.e_wholesaler.auth.dtos.Gender
-import com.example.e_wholesaler.auth.dtos.UserType
+import com.example.e_wholesaler.auth.utils.Gender
+import com.example.e_wholesaler.auth.utils.UserType
 import kotlinx.serialization.Serializable
 
 

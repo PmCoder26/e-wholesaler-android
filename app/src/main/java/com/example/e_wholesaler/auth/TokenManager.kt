@@ -7,27 +7,15 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.e_wholesaler.auth.dtos.UserType
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
+import com.example.e_wholesaler.auth.utils.UserType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.example.project.ktor_client.HOST_URL
 import org.parimal.auth.dtos.LoginResponse
 import org.parimal.auth.dtos.TokenState
-import org.parimal.auth.dtos.Tokens
-import org.parimal.utils.ApiResponse
 
-class TokenManager(
-    private var dataStore: DataStore<Preferences>,
-    private val httpClient: HttpClient
-) : ViewModel() {
+class TokenManager(private var dataStore: DataStore<Preferences>) : ViewModel() {
 
     private val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
     private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
@@ -88,41 +76,18 @@ class TokenManager(
 
     suspend fun saveTokens(data: LoginResponse) {
         dataStore.edit { pref ->
-            pref[ACCESS_TOKEN_KEY] = "Bearer " + data.accessToken
-            pref[REFRESH_TOKEN_KEY] = "Bearer " + data.refreshToken
-            pref[USER_TYPE_KEY] = data.userType.toString()
+            pref[ACCESS_TOKEN_KEY] = "" + data.accessToken
+            pref[REFRESH_TOKEN_KEY] = "" + data.refreshToken
+            pref[USER_TYPE_KEY] = data.userType.name
             pref[USER_TYPE_ID_KEY] = data.userTypeId
         }
     }
 
-    suspend fun refreshTokens() {
-        val response = try {
-            httpClient.post(
-                urlString = "http://$HOST_URL/auth/refresh-tokens"
-            ) {
-                headers.remove("Authorization")
-                contentType(ContentType.Application.Json)
-                setBody(
-                    Tokens(
-                        accessToken = accessToken.value!!,
-                        refreshToken = refreshToken.value!!
-                    )
-                )
-            }.body<ApiResponse<LoginResponse>>()
-        } catch (e: Exception) {
-            println("Token refresh error: ${e.message}")
-            null
-        }
-        response?.data?.let { data ->
-            println("Refreshing tokens response data: $data")
-            saveTokens(
-                LoginResponse(
-                    accessToken = data.accessToken,
-                    refreshToken = data.refreshToken,
-                    userType = data.userType,
-                    userTypeId = data.userTypeId
-                )
-            )
+    suspend fun updateTokens(accessToken: String, refreshToken: String) {
+        dataStore.edit { pref ->
+            pref[ACCESS_TOKEN_KEY] = accessToken
+            pref[REFRESH_TOKEN_KEY] = refreshToken
+            println("Tokens refreshed")
         }
     }
 

@@ -62,15 +62,4 @@ class AuthClient(
         }
     }
 
-//
-//    fun checkTokens(): Boolean {
-//        val tokenState = tokenManager?.tokenState2?.value
-//        return tokenState?.accessToken != null && tokenState.refreshToken != null
-//    }
-//
-//    suspend fun logout() {
-//        tokenManager?.clearTokens()
-//    }
-
-
 }

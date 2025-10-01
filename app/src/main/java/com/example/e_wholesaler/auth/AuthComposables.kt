@@ -54,8 +54,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.example.e_wholesaler.auth.dtos.Gender
-import com.example.e_wholesaler.auth.dtos.UserType
+import com.example.e_wholesaler.auth.utils.Gender
+import com.example.e_wholesaler.auth.utils.UserType
 import kotlinx.coroutines.launch
 import org.koin.java.KoinJavaComponent.inject
 import org.parimal.auth.AuthClient
