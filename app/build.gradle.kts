@@ -11,6 +11,10 @@ android {
     namespace = "com.example.e_wholesaler"
     compileSdk = 35
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.example.e_wholesaler"
         minSdk = 24
@@ -39,6 +43,15 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+
+    buildTypes {
+        debug {
+            buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
+        }
+        release {
+            buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
+        }
     }
 }
 

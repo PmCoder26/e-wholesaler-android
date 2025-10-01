@@ -1,6 +1,7 @@
 package org.example.project.ktor_client
 
 import android.util.Log
+import com.example.e_wholesaler.BuildConfig
 import com.example.e_wholesaler.auth.dtos.AccessToken
 import com.example.e_wholesaler.auth.dtos.RefreshToken
 import io.ktor.client.HttpClient
@@ -25,7 +26,7 @@ import org.parimal.utils.ApiResponse
 fun createHttpClient(engine: HttpClientEngine, tokenManager: TokenManager): HttpClient {
     return HttpClient(engine) {
         install(Logging){
-            level = LogLevel.ALL
+            level = if (BuildConfig.IS_DEBUG_BUILD) LogLevel.ALL else LogLevel.NONE
             logger = object: Logger {
                 override fun log(message: String) {
                     Log.v("KtorLogger", message)
