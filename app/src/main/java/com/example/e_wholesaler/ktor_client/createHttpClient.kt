@@ -20,10 +20,12 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import org.koin.core.qualifier.named
+import org.koin.java.KoinJavaComponent.inject
 import org.parimal.auth.TokenManager
 import org.parimal.utils.ApiResponse
 
-fun createHttpClient(engine: HttpClientEngine, tokenManager: TokenManager): HttpClient {
+fun createHttpClientForAuth(engine: HttpClientEngine): HttpClient {
     return HttpClient(engine) {
         install(Logging){
             level = if (BuildConfig.IS_DEBUG_BUILD) LogLevel.ALL else LogLevel.NONE
@@ -41,18 +43,30 @@ fun createHttpClient(engine: HttpClientEngine, tokenManager: TokenManager): Http
                 contentType = ContentType.Application.Json
             )
         }
-        install(Auth){
-            bearer {
-                val tempClient = HttpClient(engine) {
-                    install(ContentNegotiation) {
-                        json(
-                            json = Json {
-                                ignoreUnknownKeys = true
-                            },
-                            contentType = ContentType.Application.Json
-                        )
-                    }
+    }
+}
+
+fun createHttpClientMain(engine: HttpClientEngine, tokenManager: TokenManager): HttpClient {
+    return HttpClient(engine) {
+        install(Logging) {
+            level = if (BuildConfig.IS_DEBUG_BUILD) LogLevel.ALL else LogLevel.NONE
+            logger = object : Logger {
+                override fun log(message: String) {
+                    Log.v("KtorLogger", message)
                 }
+            }
+        }
+        install(ContentNegotiation) {
+            json(
+                json = Json {
+                    ignoreUnknownKeys =
+                        true        // helpful if unknown data comes, hence preventing from crashing.
+                },
+                contentType = ContentType.Application.Json
+            )
+        }
+        install(Auth) {
+            bearer {
                 loadTokens {
                     val tokenState = tokenManager.tokenState2.value
                     BearerTokens(
@@ -61,6 +75,10 @@ fun createHttpClient(engine: HttpClientEngine, tokenManager: TokenManager): Http
                     )
                 }
                 refreshTokens {
+                    val tempClient by inject<HttpClient>(
+                        HttpClient::class.java,
+                        named("auth-http-client")
+                    )
                     val refreshToken = oldTokens?.refreshToken ?: ""
                     val newAccessToken = refreshTokens(tempClient, refreshToken)
                     newAccessToken?.let { newToken ->

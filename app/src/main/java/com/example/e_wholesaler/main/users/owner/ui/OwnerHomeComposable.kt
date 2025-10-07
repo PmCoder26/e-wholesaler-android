@@ -1,6 +1,7 @@
 package com.example.e_wholesaler.main.users.owner.ui
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
@@ -65,6 +66,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
+import com.example.e_wholesaler.main.users.owner.dtos.Product
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
 import com.example.e_wholesaler.main.users.owner.dtos.hasDifferentData
 import com.example.e_wholesaler.main.users.owner.dtos.hasNoBlankField
@@ -74,7 +76,6 @@ import com.example.e_wholesaler.main.users.owner.viewmodels.utils.Details
 import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
 import com.example.e_wholesaler.navigation_viewmodel.NullNavigationViewModel
 import com.example.ui.OwnerInfoScreen
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -87,7 +88,7 @@ fun getIsPreview() = LocalInspectionMode.current
 
 
 @RequiresApi(Build.VERSION_CODES.O)
-@SuppressLint("ContextCastToActivity", "ProduceStateDoesNotAssignValue")
+@SuppressLint("ContextCastToActivity", "ProduceStateDoesNotAssignValue", "UnrememberedMutableState")
 @Composable
 fun OwnerScreen() {
 
@@ -115,7 +116,7 @@ fun OwnerScreen() {
             OwnerHomeScreen(
                 navCon,
                 refreshStats = {
-                    scope.launch(Dispatchers.Main) {
+                    scope.launch {
                         ownerViewModel.getHomeScreenDetails()
                     }
                 },
@@ -144,7 +145,7 @@ fun OwnerScreen() {
         ) {
             val currentShopId = it.arguments?.getLong("shopId") ?: -1
             val currentShop by produceState(initialValue = Shop(), currentShopId) {
-                value = ownerViewModel.getShopById(currentShopId) ?: Shop()
+                value = ownerViewModel.getShopById(currentShopId)
             }
 
             ShopDetailsScreen(
@@ -162,32 +163,23 @@ fun OwnerScreen() {
         ) {
             val currentShopId = it.arguments?.getLong("shopId") ?: -1
             val currentShop by produceState(initialValue = Shop(), currentShopId) {
-                value = ownerViewModel.getShopById(currentShopId) ?: Shop()
+                value = ownerViewModel.getShopById(currentShopId)
             }
 
             EditShopDetailsScreen(
                 shop = currentShop,
                 onBackClicked = { navCon.popBackStack() },
                 onSaveClicked = { changedShop ->
-                    scope.launch(Dispatchers.Main) {
+                    scope.launch {
                         if (changedShop.hasNoBlankField() && changedShop.hasDifferentData(
                                 currentShop
                             )
                         ) {
-                            if (ownerViewModel.updateShopDetails(changedShop)) {
-                                Toast.makeText(
-                                    context,
-                                    "Shop details edited successfully",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                navCon.popBackStack()
-                            }
-                        } else {
-                            Toast.makeText(
-                                context,
-                                "Please change or fill the shop details to proceed further",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            val hasDataUpdated = ownerViewModel.updateShopDetails(changedShop)
+                            val message =
+                                if (hasDataUpdated) "Shop details edited successfully" else "Failed to update shop details"
+                            showToast(context, message)
+                            if (hasDataUpdated) navCon.popBackStack()
                         }
                     }
                 }
@@ -198,28 +190,14 @@ fun OwnerScreen() {
             AddShopScreen(
                 onCancelClicked = { navCon.popBackStack() },
                 onSaveClicked = { newShop ->
-                    scope.launch(Dispatchers.Main) {
+                    scope.launch {
                         if (newShop.hasNoBlankField()) {
-                            if (ownerViewModel.addNewShop(newShop)) {
-                                Toast.makeText(
-                                    context,
-                                    "New shop added successfully",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                navCon.popBackStack()
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    "Unable to add the new shop",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
+                            val hasAddedNewShop = ownerViewModel.addNewShop(newShop)
+                            val message =
+                                if (hasAddedNewShop) "New shop added successfully" else "Unable to add the new shop"
+                            showToast(context, message)
                         } else {
-                            Toast.makeText(
-                                context,
-                                "Please fill all the shop details",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            showToast(context, "Please fill all the shop details")
                         }
                     }
                 }
@@ -237,11 +215,47 @@ fun OwnerScreen() {
                 onBackClicked = { navCon.popBackStack() },
                 onShopSelected = { ownerViewModel.getShopProducts(it) },
                 onAddProductClicked = {},
-                onFilterChange = { ownerViewModel.updateProductSortType(it) }
+                onFilterChange = { ownerViewModel.updateProductSortType(it) },
+                onInfoButtonClick = { clickedProduct -> navCon.navigate("ProductDetailsScreen/${clickedProduct.name}") }
+            )
+        }
+
+        composable(
+            route = "ProductDetailsScreen/{productName}",
+            arguments = listOf(
+                navArgument("productName") { type = NavType.StringType }
+            )
+        ) {
+            val productName = it.arguments?.getString("productName") ?: ""
+            var trigger by remember {
+                mutableIntStateOf(0)
+            }
+            val selectedProduct by produceState(
+                initialValue = Product(),
+                key1 = productName,
+                key2 = trigger
+            ) {
+                value = ownerViewModel.getProductByName(productName)
+            }
+
+            ProductDetailsScreen(
+                product = selectedProduct,
+                onBackClicked = { navCon.popBackStack() },
+                onEditSubProductClicked = { },
+                onAddSubProductClicked = { },
+                onDeleteSubProductConfirm = { subProduct ->
+                    scope.launch {
+                        val hasRemoved =
+                            ownerViewModel.removeShopSubProduct(selectedProduct.name, subProduct)
+                        val message =
+                            if (hasRemoved) "Product removed successfully" else "Failed to remove product"
+                        showToast(context, message)
+                        if (hasRemoved) trigger++
+                    }
+                }
             )
         }
     }
-
 }
 
 
@@ -465,4 +479,9 @@ fun BottomNavigationBar(navController: NavHostController) {
             )
         }
     }
+}
+
+
+fun showToast(context: Context, message: String) {
+    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 }

@@ -5,6 +5,7 @@ import androidx.annotation.RequiresApi
 import com.example.e_wholesaler.main.users.owner.clients.OwnerClient
 import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 
@@ -12,7 +13,7 @@ import org.koin.dsl.module
 val ownerModule = module {
 
     single() {
-        OwnerClient(get())
+        OwnerClient(get(named("main-http-client")))
     }
 
     viewModel() {

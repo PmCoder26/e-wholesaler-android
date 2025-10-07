@@ -4,8 +4,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Product(
-    val name: String,
-    val category: String,
-    val company: String,
-    val shopSubProducts: List<SubProduct>
+    val name: String = "Product Name",
+    val category: String = "Category",
+    val company: String = "Company",
+    var shopSubProducts: List<SubProduct> = emptyList()
 )

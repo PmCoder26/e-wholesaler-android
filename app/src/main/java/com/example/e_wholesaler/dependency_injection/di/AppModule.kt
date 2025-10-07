@@ -6,10 +6,12 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
 import io.ktor.client.engine.okhttp.OkHttp
-import org.example.project.ktor_client.createHttpClient
+import org.example.project.ktor_client.createHttpClientForAuth
+import org.example.project.ktor_client.createHttpClientMain
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.core.module.Module
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import org.parimal.auth.AuthClient
 import org.parimal.auth.TokenManager
@@ -23,8 +25,12 @@ val appModule: Module = module {
         androidContext().datastore
     }
 
-    single() {
-        createHttpClient(OkHttp.create(), get())
+    single(qualifier = named("auth-http-client")) {
+        createHttpClientForAuth(OkHttp.create())
+    }
+
+    single(qualifier = named("main-http-client")) {
+        createHttpClientMain(OkHttp.create(), get())
     }
 
     single() {
@@ -32,7 +38,7 @@ val appModule: Module = module {
     }
 
     single() {
-        AuthClient(get(), get())
+        AuthClient(get(named("auth-http-client")), get())
     }
 
     viewModel() {

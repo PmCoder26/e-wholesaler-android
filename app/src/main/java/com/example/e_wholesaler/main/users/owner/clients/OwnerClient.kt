@@ -8,9 +8,11 @@ import com.example.e_wholesaler.ktor_client.RequestType.POST
 import com.example.e_wholesaler.ktor_client.RequestType.PUT
 import com.example.e_wholesaler.main.users.owner.dtos.DailyShopRevenue
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
+import com.example.e_wholesaler.main.users.owner.dtos.Message
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 import com.example.e_wholesaler.main.users.owner.dtos.Product
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
+import com.example.e_wholesaler.main.users.owner.dtos.ShopSubProductRemoveRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
@@ -55,6 +57,18 @@ class OwnerClient(private val httpClient: HttpClient) {
         return makeApiCall<MutableList<Product>, Any>(ownerId, GET, "/shop/$shopId/products", null)
     }
 
+    suspend fun removeShopSubProduct(
+        ownerId: Long,
+        requestDTO: ShopSubProductRemoveRequest
+    ): Message? {
+        return makeApiCall<Message, ShopSubProductRemoveRequest>(
+            ownerId,
+            DELETE,
+            "/shop/products/shop-sub-product",
+            requestDTO
+        )
+    }
+
     private suspend inline fun <reified ResponseType, reified RequestBodyType> makeApiCall(
         ownerId: Long, requestType: RequestType, url: String, requestBody: RequestBodyType?
     ): ResponseType? {
@@ -82,6 +96,7 @@ class OwnerClient(private val httpClient: HttpClient) {
                 }
 
                 DELETE -> httpClient.delete("$OWNER_BASE_URL/$ownerId$url") {
+                    contentType(ContentType.Application.Json)
                     requestBody?.let { setBody(it) }
                 }
             }.body<ApiResponse<ResponseType>>()

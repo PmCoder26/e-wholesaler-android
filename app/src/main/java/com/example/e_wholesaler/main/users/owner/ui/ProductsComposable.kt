@@ -9,6 +9,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,16 +19,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -41,6 +47,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -69,6 +76,9 @@ val BackgroundScreen = Color(0xFFF0F4F8)
 val TableHeaderBackground = Color(0xFFE3F2FD)
 val TableHeaderText = Color(0xFF0D47A1)
 val PriceColor = TopBarBlue
+val StockGreen = Color(0xFF4CAF50)
+val StockRed = Color(0xFFF44336)
+val DeleteRed = Color(0xFFE53935)
 
 
 @Preview(showBackground = true)
@@ -90,72 +100,34 @@ fun ShopProductsScreenPreview() {
             name = "Lux Soap",
             category = "Soap",
             company = "Unilever",
-            shopSubProducts = listOf(
-                // Assuming MRP is for the pack. If MRP is per piece, adjust calculation.
-                // For preview, let's assume MRP in SubProduct is total MRP for that quantity.
-                SubProduct(
-                    id = 101,
-                    mrp = 5.0 * 1,
-                    sellingPrice = 5.0,
-                    quantity = 1,
-                    stock = 500
-                ), // Single Rs. 5 pc
+            shopSubProducts = mutableListOf(
+                SubProduct(id = 101, mrp = 5.0 * 1, sellingPrice = 5.0, quantity = 1, stock = 500),
                 SubProduct(
                     id = 102,
                     mrp = 10.0 * 1,
                     sellingPrice = 10.0,
                     quantity = 1,
                     stock = 300
-                ), // Single Rs. 10 pc
-                SubProduct(
-                    id = 103,
-                    mrp = 35.0,
-                    sellingPrice = 32.0,
-                    quantity = 1,
-                    stock = 100
-                ), // "Large Pack" single item
-                SubProduct(
-                    id = 104,
-                    mrp = 50.0,
-                    sellingPrice = 45.0,
-                    quantity = 5,
-                    stock = 50
-                ) // Pack of 5 (e.g. 5x10 MRP)
+                ),
+                SubProduct(id = 103, mrp = 35.0, sellingPrice = 32.0, quantity = 1, stock = 100),
+                SubProduct(id = 104, mrp = 50.0, sellingPrice = 45.0, quantity = 5, stock = 50)
             )
         ),
         Product(
             name = "Parle-G Biscuits",
             category = "Biscuit",
             company = "Parle",
-            shopSubProducts = listOf(
-                SubProduct(
-                    id = 201,
-                    mrp = 5.0,
-                    sellingPrice = 5.0,
-                    quantity = 1,
-                    stock = 1000
-                ), // Small pack
-                SubProduct(
-                    id = 202,
-                    mrp = 10.0,
-                    sellingPrice = 9.0,
-                    quantity = 1,
-                    stock = 200
-                ), // Medium pack
-                SubProduct(
-                    id = 203,
-                    mrp = 60.0,
-                    sellingPrice = 54.0,
-                    quantity = 12,
-                    stock = 100
-                ) // Pack of 12 (Rs.5/pc MRP)
+            shopSubProducts = mutableListOf(
+                SubProduct(id = 201, mrp = 5.0, sellingPrice = 5.0, quantity = 1, stock = 1000),
+                SubProduct(id = 202, mrp = 10.0, sellingPrice = 9.0, quantity = 1, stock = 200),
+                SubProduct(id = 203, mrp = 60.0, sellingPrice = 54.0, quantity = 12, stock = 100)
             )
         ),
         Product(
             name = "Balaji Wafers - Masala",
             category = "Snacks",
             company = "Balaji",
-            shopSubProducts = listOf(
+            shopSubProducts = mutableListOf(
                 SubProduct(id = 301, mrp = 5.0, sellingPrice = 5.0, quantity = 1, stock = 300),
                 SubProduct(id = 302, mrp = 10.0, sellingPrice = 10.0, quantity = 1, stock = 200),
                 SubProduct(id = 303, mrp = 30.0, sellingPrice = 28.0, quantity = 1, stock = 100)
@@ -169,7 +141,8 @@ fun ShopProductsScreenPreview() {
         onBackClicked = {},
         onShopSelected = {},
         onAddProductClicked = {},
-        onFilterChange = {}
+        onFilterChange = {},
+        onInfoButtonClick = {}
     )
 }
 
@@ -182,7 +155,8 @@ fun ShopProductsScreen(
     onBackClicked: () -> Unit,
     onShopSelected: (Shop) -> Unit,
     onAddProductClicked: () -> Unit,
-    onFilterChange: (ProductSortType) -> Unit
+    onFilterChange: (ProductSortType) -> Unit,
+    onInfoButtonClick: (Product) -> Unit
 ) {
     var selectedShop by remember { mutableStateOf(initialSelectedShop) }
     var searchQuery by remember { mutableStateOf("") }
@@ -330,7 +304,7 @@ fun ShopProductsScreen(
                                     expandedProductKey =
                                         if (product.name == expandedProductKey) null else product.name
                                 },
-                                onInfoButtonClick = { }
+                                onInfoButtonClick = { onInfoButtonClick(product) }
                             )
                             HorizontalDivider(
                                 thickness = DividerDefaults.Thickness,
@@ -450,9 +424,7 @@ fun ProductCardItem(
                 )
             }
 
-            IconButton(
-                onClick = { }
-            ) {
+            IconButton(onClick = onInfoButtonClick) {
                 Icon(
                     imageVector = Icons.Outlined.Info,
                     contentDescription = "Product Info",
@@ -545,4 +517,298 @@ fun ExpandedSubProductsView(subProducts: List<SubProduct>) {
             modifier = Modifier.padding(vertical = 8.dp)
         )
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ProductDetailsScreenPreview() {
+    val sampleProduct = Product(
+        name = "Lux Soap",
+        category = "Soap",
+        company = "Unilever",
+        shopSubProducts = mutableListOf(
+            SubProduct(id = 101, mrp = 10.0, sellingPrice = 10.0, quantity = 1, stock = 150),
+            SubProduct(id = 102, mrp = 50.0, sellingPrice = 45.0, quantity = 5, stock = 80),
+            SubProduct(id = 103, mrp = 100.0, sellingPrice = 85.0, quantity = 10, stock = 0)
+        )
+    )
+    ProductDetailsScreen(
+        product = sampleProduct,
+        onBackClicked = {},
+        onAddSubProductClicked = {},
+        onEditSubProductClicked = {},
+        onDeleteSubProductConfirm = {},
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProductDetailsScreen(
+    product: Product,
+    onBackClicked: () -> Unit,
+    onAddSubProductClicked: () -> Unit,
+    onEditSubProductClicked: (SubProduct) -> Unit,
+    onDeleteSubProductConfirm: (SubProduct) -> Unit,
+) {
+    var subProductToDelete by remember {
+        mutableStateOf<SubProduct?>(null)
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Product", color = IconColorWhite) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClicked) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = IconColorWhite
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = TopBarBlue)
+            )
+        },
+        containerColor = BackgroundScreen,
+        bottomBar = {
+            Button(
+                onClick = onAddSubProductClicked,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = TopBarBlue),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add Variant", tint = Color.White)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Add New Variant", color = Color.White, fontSize = 16.sp)
+            }
+        }
+    ) { paddingValues ->
+
+        subProductToDelete?.let { subProduct ->
+            DeleteConfirmationDialog(
+                subProduct = subProduct,
+                onConfirm = {
+                    onDeleteSubProductConfirm(subProduct)
+                    subProductToDelete = null // Hide dialog
+                },
+                onDismiss = {
+                    subProductToDelete = null // Hide dialog
+                }
+            )
+        }
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(vertical = 16.dp)
+        ) {
+            // Parent Product Info Card
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardBackgroundWhite),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            product.name,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Category: ${product.category}",
+                            fontSize = 16.sp,
+                            color = TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Company: ${product.company}",
+                            fontSize = 16.sp,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            // List of Sub-Product Variants
+            itemsIndexed(
+                items = product.shopSubProducts,
+                key = { _, subProduct -> subProduct.id }) { _, subProduct ->
+                println("Recomposed item: ${subProduct.id}")
+                SubProductCard(
+                    subProduct = subProduct,
+                    onEditClicked = { onEditSubProductClicked(subProduct) },
+                    onDeleteClicked = { subProductToDelete = subProduct }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SubProductCard(
+    subProduct: SubProduct,
+    onEditClicked: () -> Unit,
+    onDeleteClicked: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBackgroundWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            val packDescription = "Selling Quantity: ${subProduct.quantity}"
+            Text(
+                packDescription,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Medium,
+                color = TextPrimary
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // MRP and Selling Price Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                InfoColumn(
+                    label = "MRP",
+                    value = "₹${subProduct.mrp}",
+                    modifier = Modifier.weight(1f)
+                )
+                InfoColumn(
+                    label = "Selling Price",
+                    value = "₹${subProduct.sellingPrice}",
+                    valueColor = PriceColor,
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.End
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Stock Status Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                    Text("Stock Status", fontSize = 16.sp, color = TextSecondary)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val stockStatusColor = if (subProduct.stock > 0) StockGreen else StockRed
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(stockStatusColor, CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (subProduct.stock > 0) "In Stock" else "Out of Stock",
+                            color = stockStatusColor,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+                InfoColumn(
+                    label = "Available Units",
+                    value = "${subProduct.stock}",
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.End
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Action Buttons Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = onEditClicked,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = TopBarBlue)
+                ) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Edit Price",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Edit")
+                }
+                OutlinedButton(
+                    onClick = onDeleteClicked,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = DeleteRed),
+                    border = ButtonDefaults.outlinedButtonBorder().copy(width = 1.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Delete")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoColumn(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    valueColor: Color = TextPrimary,
+    horizontalAlignment: Alignment.Horizontal = Alignment.Start
+) {
+    Column(modifier = modifier, horizontalAlignment = horizontalAlignment) {
+        Text(label, fontSize = 16.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(value, fontSize = 16.sp, color = valueColor, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+fun DeleteConfirmationDialog(
+    subProduct: SubProduct,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirm Deletion") },
+        text = { Text("Are you sure you want to delete the variant with selling price ₹${subProduct.sellingPrice}?") },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = DeleteRed)
+            ) {
+                Text("Confirm", color = Color.White)
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
