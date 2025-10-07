@@ -645,7 +645,6 @@ fun ProductDetailsScreen(
             itemsIndexed(
                 items = product.shopSubProducts,
                 key = { _, subProduct -> subProduct.id }) { _, subProduct ->
-                println("Recomposed item: ${subProduct.id}")
                 SubProductCard(
                     subProduct = subProduct,
                     onEditClicked = { onEditSubProductClicked(subProduct) },
