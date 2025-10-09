@@ -1,6 +1,8 @@
 package com.example.e_wholesaler.main.users.owner.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -26,9 +28,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
@@ -62,7 +66,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -70,7 +76,9 @@ import androidx.compose.ui.unit.sp
 import com.example.e_wholesaler.main.users.owner.dtos.Product
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
 import com.example.e_wholesaler.main.users.owner.dtos.SubProduct
+import com.example.e_wholesaler.main.users.owner.dtos.existsByMrp
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.ProductSortType
+
 
 val BackgroundScreen = Color(0xFFF0F4F8)
 val TableHeaderBackground = Color(0xFFE3F2FD)
@@ -121,16 +129,6 @@ fun ShopProductsScreenPreview() {
                 SubProduct(id = 201, mrp = 5.0, sellingPrice = 5.0, quantity = 1, stock = 1000),
                 SubProduct(id = 202, mrp = 10.0, sellingPrice = 9.0, quantity = 1, stock = 200),
                 SubProduct(id = 203, mrp = 60.0, sellingPrice = 54.0, quantity = 12, stock = 100)
-            )
-        ),
-        Product(
-            name = "Balaji Wafers - Masala",
-            category = "Snacks",
-            company = "Balaji",
-            shopSubProducts = mutableListOf(
-                SubProduct(id = 301, mrp = 5.0, sellingPrice = 5.0, quantity = 1, stock = 300),
-                SubProduct(id = 302, mrp = 10.0, sellingPrice = 10.0, quantity = 1, stock = 200),
-                SubProduct(id = 303, mrp = 30.0, sellingPrice = 28.0, quantity = 1, stock = 100)
             )
         )
     )
@@ -270,16 +268,13 @@ fun ShopProductsScreen(
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterButton("Name", activeFilter.name) {
-                    activeFilter = ProductSortType.NAME
-                    onFilterChange(activeFilter)
+                    activeFilter = ProductSortType.NAME; onFilterChange(activeFilter)
                 }
                 FilterButton("Category", activeFilter.name) {
-                    activeFilter = ProductSortType.CATEGORY
-                    onFilterChange(activeFilter)
+                    activeFilter = ProductSortType.CATEGORY; onFilterChange(activeFilter)
                 }
                 FilterButton("Company", activeFilter.name) {
-                    activeFilter = ProductSortType.COMPANY
-                    onFilterChange(activeFilter)
+                    activeFilter = ProductSortType.COMPANY; onFilterChange(activeFilter)
                 }
             }
 
@@ -295,8 +290,8 @@ fun ShopProductsScreen(
                     ProductTableHeader()
                     LazyColumn(modifier = Modifier.weight(1f)) {
                         items(
-                            products.filteredProducts(searchQuery),
-                            key = { product -> product.name }) { product ->
+                            products.filter { it.name.contains(searchQuery, true) },
+                            key = { it.name }) { product ->
                             ProductCardItem(
                                 product = product,
                                 isExpanded = product.name == expandedProductKey,
@@ -315,14 +310,6 @@ fun ShopProductsScreen(
                 }
             }
         }
-    }
-}
-
-private fun List<Product>.filteredProducts(searchQuery: String): List<Product> {
-    return this.filter {
-        it.name.contains(searchQuery, ignoreCase = true) ||
-                it.category.contains(searchQuery, ignoreCase = true) ||
-                it.company.contains(searchQuery, ignoreCase = true)
     }
 }
 
@@ -384,11 +371,7 @@ fun ProductCardItem(
     onToggleExpand: () -> Unit,
     onInfoButtonClick: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxSize()
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -423,7 +406,6 @@ fun ProductCardItem(
                     fontSize = 16.sp
                 )
             }
-
             IconButton(onClick = onInfoButtonClick) {
                 Icon(
                     imageVector = Icons.Outlined.Info,
@@ -435,13 +417,14 @@ fun ProductCardItem(
         AnimatedVisibility(
             visible = isExpanded,
             enter = slideInVertically(
-                animationSpec = tween(durationMillis = 200),
-                initialOffsetY = { -it / 2 })
-                    + fadeIn(animationSpec = tween(durationMillis = 200)),
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    Spring.StiffnessLow
+                ),
+                initialOffsetY = { -it / 2 }) + fadeIn(animationSpec = tween(durationMillis = 200)),
             exit = slideOutVertically(
                 animationSpec = tween(durationMillis = 200),
-                targetOffsetY = { -it / 2 })
-                    + fadeOut(animationSpec = tween(durationMillis = 200))
+                targetOffsetY = { -it / 2 }) + fadeOut(animationSpec = tween(durationMillis = 200))
         ) {
             ExpandedSubProductsView(subProducts = product.shopSubProducts)
         }
@@ -460,7 +443,7 @@ fun ExpandedSubProductsView(subProducts: List<SubProduct>) {
         ) {
             itemsIndexed(
                 subProducts,
-                key = { index, subProduct -> subProduct.id }) { index, subProduct ->
+                key = { _, subProduct -> subProduct.id }) { index, subProduct ->
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -468,38 +451,35 @@ fun ExpandedSubProductsView(subProducts: List<SubProduct>) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "MRP/Pc: ₹${subProduct.mrp}",
+                            "MRP/Pc: ₹${subProduct.mrp}",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Medium,
                             color = PriceColor,
                             modifier = Modifier.weight(1f)
                         )
                         Text(
-                            text = "Selling: ₹${subProduct.sellingPrice}",
+                            "Selling: ₹${subProduct.sellingPrice}",
                             fontSize = 16.sp,
                             textAlign = TextAlign.Center,
                             color = TextSecondary,
                             modifier = Modifier.weight(1.5f)
                         )
                     }
-
                     Spacer(modifier = Modifier.height(4.dp))
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Quantity: ${subProduct.quantity}",
+                            "Quantity: ${subProduct.quantity}",
                             fontSize = 15.sp,
                             color = TextPrimary,
                             fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Start,
+                            textAlign = TextAlign.Start
                         )
                     }
                 }
-
                 if (index < subProducts.size - 1) {
                     HorizontalDivider(
                         thickness = 0.5.dp,
@@ -511,7 +491,7 @@ fun ExpandedSubProductsView(subProducts: List<SubProduct>) {
         }
     } else {
         Text(
-            text = "No specific pack details available.",
+            "No specific pack details available.",
             fontSize = 13.sp,
             color = TextSecondary,
             modifier = Modifier.padding(vertical = 8.dp)
@@ -535,9 +515,9 @@ fun ProductDetailsScreenPreview() {
     ProductDetailsScreen(
         product = sampleProduct,
         onBackClicked = {},
-        onAddSubProductClicked = {},
-        onEditSubProductClicked = {},
-        onDeleteSubProductConfirm = {},
+        onAddSubProductConfirm = { subProduct -> },
+        onEditSubProductConfirm = { _ -> },
+        onDeleteSubProductConfirm = { _ -> }
     )
 }
 
@@ -546,13 +526,13 @@ fun ProductDetailsScreenPreview() {
 fun ProductDetailsScreen(
     product: Product,
     onBackClicked: () -> Unit,
-    onAddSubProductClicked: () -> Unit,
-    onEditSubProductClicked: (SubProduct) -> Unit,
-    onDeleteSubProductConfirm: (SubProduct) -> Unit,
+    onAddSubProductConfirm: (SubProduct) -> Unit,
+    onEditSubProductConfirm: (SubProduct) -> Unit,
+    onDeleteSubProductConfirm: (SubProduct) -> Unit
 ) {
-    var subProductToDelete by remember {
-        mutableStateOf<SubProduct?>(null)
-    }
+    var subProductToDelete by remember { mutableStateOf<SubProduct?>(null) }
+    var showAddVariantDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -573,7 +553,7 @@ fun ProductDetailsScreen(
         containerColor = BackgroundScreen,
         bottomBar = {
             Button(
-                onClick = onAddSubProductClicked,
+                onClick = { showAddVariantDialog = true },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
@@ -587,17 +567,23 @@ fun ProductDetailsScreen(
             }
         }
     ) { paddingValues ->
-
-        subProductToDelete?.let { subProduct ->
-            DeleteConfirmationDialog(
-                subProduct = subProduct,
-                onConfirm = {
-                    onDeleteSubProductConfirm(subProduct)
-                    subProductToDelete = null // Hide dialog
-                },
-                onDismiss = {
-                    subProductToDelete = null // Hide dialog
+        if (showAddVariantDialog) {
+            AddVariantDialog(
+                onDismissRequest = { showAddVariantDialog = false },
+                onConfirm = { subProduct ->
+                    val doesSubProductExists = product.shopSubProducts.existsByMrp(subProduct.mrp)
+                    if (doesSubProductExists) showToast(context, "Product variant already exists")
+                    else onAddSubProductConfirm(subProduct)
+                    showAddVariantDialog = false
                 }
+            )
+        }
+
+        subProductToDelete?.let {
+            DeleteConfirmationDialog(
+                subProduct = it,
+                onConfirm = { onDeleteSubProductConfirm(it); subProductToDelete = null },
+                onDismiss = { subProductToDelete = null }
             )
         }
 
@@ -609,7 +595,6 @@ fun ProductDetailsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
-            // Parent Product Info Card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -641,13 +626,10 @@ fun ProductDetailsScreen(
                 }
             }
 
-            // List of Sub-Product Variants
-            itemsIndexed(
-                items = product.shopSubProducts,
-                key = { _, subProduct -> subProduct.id }) { _, subProduct ->
+            items(product.shopSubProducts, key = { it.id }) { subProduct ->
                 SubProductCard(
                     subProduct = subProduct,
-                    onEditClicked = { onEditSubProductClicked(subProduct) },
+                    onEditConfirm = onEditSubProductConfirm,
                     onDeleteClicked = { subProductToDelete = subProduct }
                 )
             }
@@ -658,116 +640,286 @@ fun ProductDetailsScreen(
 @Composable
 fun SubProductCard(
     subProduct: SubProduct,
-    onEditClicked: () -> Unit,
+    onEditConfirm: (SubProduct) -> Unit,
     onDeleteClicked: () -> Unit
 ) {
+    var isEditing by remember { mutableStateOf(false) }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackgroundWhite),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            val packDescription = "Selling Quantity: ${subProduct.quantity}"
-            Text(
-                packDescription,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Medium,
-                color = TextPrimary
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // MRP and Selling Price Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                InfoColumn(
-                    label = "MRP",
-                    value = "₹${subProduct.mrp}",
-                    modifier = Modifier.weight(1f)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Product info column takes the main space
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Quantity ${subProduct.quantity}",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextPrimary
                 )
-                InfoColumn(
-                    label = "Selling Price",
-                    value = "₹${subProduct.sellingPrice}",
-                    valueColor = PriceColor,
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.End
-                )
-            }
+                Spacer(modifier = Modifier.height(12.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    InfoColumn(
+                        label = "MRP",
+                        value = "₹${subProduct.mrp}",
+                        modifier = Modifier.weight(1f)
+                    )
+                    InfoColumn(
+                        label = "Selling Price",
+                        value = "₹${subProduct.sellingPrice}",
+                        valueColor = PriceColor,
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.End
+                    )
+                }
 
-            // Stock Status Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                    Text("Stock Status", fontSize = 16.sp, color = TextSecondary)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        val stockStatusColor = if (subProduct.stock > 0) StockGreen else StockRed
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(stockStatusColor, CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (subProduct.stock > 0) "In Stock" else "Out of Stock",
-                            color = stockStatusColor,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Stock Status", fontSize = 14.sp, color = TextSecondary)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val stockStatusColor =
+                                if (subProduct.stock > 0) StockGreen else StockRed
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(stockStatusColor, CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                if (subProduct.stock > 0) "In Stock" else "Out of Stock",
+                                color = stockStatusColor,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
+
+                    InfoColumn(
+                        label = "Available Units",
+                        value = "${subProduct.stock}",
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.End
+                    )
                 }
-                InfoColumn(
-                    label = "Available Units",
-                    value = "${subProduct.stock}",
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.End
-                )
+
+                // Edit form below product info
+                AnimatedVisibility(visible = isEditing) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    EditSubProductForm(
+                        subProduct = subProduct,
+                        onSaveConfirm = {
+                            onEditConfirm(it)
+                            isEditing = false
+                        }
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Action Buttons Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            // Buttons column on the right
+            Column(
+                verticalArrangement = Arrangement.SpaceAround,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Button(
-                    onClick = onEditClicked,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = TopBarBlue)
+                IconButton(
+                    onClick = { isEditing = !isEditing },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            color = if (isEditing) TextSecondary.copy(alpha = 0.1f)
+                            else TopBarBlue.copy(alpha = 0.1f),
+                            shape = CircleShape
+                        )
                 ) {
                     Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Edit Price",
-                        modifier = Modifier.size(16.dp)
+                        imageVector = if (isEditing) Icons.Default.Close else Icons.Default.Edit,
+                        contentDescription = if (isEditing) "Cancel" else "Edit",
+                        tint = if (isEditing) TextSecondary else TopBarBlue
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Edit")
                 }
-                OutlinedButton(
+
+                IconButton(
                     onClick = onDeleteClicked,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = DeleteRed),
-                    border = ButtonDefaults.outlinedButtonBorder().copy(width = 1.dp)
+                    enabled = !isEditing,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(DeleteRed.copy(alpha = 0.1f), CircleShape)
                 ) {
                     Icon(
-                        Icons.Default.Delete,
+                        imageVector = Icons.Default.Delete,
                         contentDescription = "Delete",
-                        modifier = Modifier.size(16.dp)
+                        tint = DeleteRed
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Delete")
                 }
             }
         }
+    }
+}
+
+@Composable
+fun AddVariantDialog(
+    onDismissRequest: () -> Unit,
+    onConfirm: (SubProduct) -> Unit
+) {
+    var mrp by remember { mutableStateOf("") }
+    var sellingPrice by remember { mutableStateOf("") }
+    var quantity by remember { mutableStateOf("") }
+    var stock by remember { mutableStateOf("") }
+    val isFormValid =
+        mrp.isNotBlank() && sellingPrice.isNotBlank() && quantity.isNotBlank() && stock.isNotBlank()
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("Add New Variant") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = mrp,
+                    onValueChange = { mrp = it },
+                    label = { Text("MRP") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                OutlinedTextField(
+                    value = sellingPrice,
+                    onValueChange = { sellingPrice = it },
+                    label = { Text("Selling Price") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                OutlinedTextField(
+                    value = quantity,
+                    onValueChange = { quantity = it },
+                    label = { Text("Quantity") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                OutlinedTextField(
+                    value = stock,
+                    onValueChange = { stock = it },
+                    label = { Text("Stock") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val mrpDouble = mrp.toDoubleOrNull() ?: 0.0
+                    val spDouble = sellingPrice.toDoubleOrNull() ?: 0.0
+                    val qtyInt = quantity.toIntOrNull() ?: 0
+                    val stockLong = stock.toLongOrNull() ?: 0L
+
+                    onConfirm(
+                        SubProduct(
+                            mrp = mrpDouble,
+                            sellingPrice = spDouble,
+                            quantity = qtyInt,
+                            stock = stockLong
+                        )
+                    )
+                },
+                enabled = isFormValid,
+                colors = ButtonDefaults.buttonColors(containerColor = TopBarBlue)
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismissRequest) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun EditSubProductForm(
+    subProduct: SubProduct,
+    onSaveConfirm: (SubProduct) -> Unit
+) {
+    var mrp by remember { mutableStateOf(subProduct.mrp.toString()) }
+    var sellingPrice by remember { mutableStateOf(subProduct.sellingPrice.toString()) }
+    var stock by remember { mutableStateOf(subProduct.stock.toString()) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
+
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = { Text("Confirm Changes") },
+            text = { Text("Are you sure you want to save these changes?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val updatedSubProduct = subProduct.copy(
+                            mrp = mrp.toDoubleOrNull() ?: subProduct.mrp,
+                            sellingPrice = sellingPrice.toDoubleOrNull() ?: subProduct.sellingPrice,
+                            stock = stock.toLongOrNull() ?: subProduct.stock
+                        )
+                        onSaveConfirm(updatedSubProduct)
+                        showConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = TopBarBlue)
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = {
+                    showConfirmDialog = false
+                }) { Text("Cancel") }
+            }
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            "Edit Variant Details",
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        OutlinedTextField(
+            value = mrp,
+            onValueChange = { mrp = it },
+            label = { Text("MRP") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = sellingPrice,
+            onValueChange = { sellingPrice = it },
+            label = { Text("Selling Price") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = stock,
+            onValueChange = { stock = it },
+            label = { Text("Stock") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = { showConfirmDialog = true },
+            modifier = Modifier.align(Alignment.End),
+            colors = ButtonDefaults.buttonColors(containerColor = TopBarBlue)
+        ) { Text("Save Changes") }
     }
 }
 
@@ -780,9 +932,9 @@ private fun InfoColumn(
     horizontalAlignment: Alignment.Horizontal = Alignment.Start
 ) {
     Column(modifier = modifier, horizontalAlignment = horizontalAlignment) {
-        Text(label, fontSize = 16.sp, color = TextSecondary)
+        Text(label, fontSize = 14.sp, color = TextSecondary)
         Spacer(modifier = Modifier.height(4.dp))
-        Text(value, fontSize = 16.sp, color = valueColor, fontWeight = FontWeight.Bold)
+        Text(value, fontSize = 20.sp, color = valueColor, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -800,14 +952,8 @@ fun DeleteConfirmationDialog(
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(containerColor = DeleteRed)
-            ) {
-                Text("Confirm", color = Color.White)
-            }
+            ) { Text("Confirm", color = Color.White) }
         },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
+        dismissButton = { OutlinedButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }

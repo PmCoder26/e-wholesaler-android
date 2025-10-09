@@ -12,7 +12,10 @@ import com.example.e_wholesaler.main.users.owner.dtos.Message
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 import com.example.e_wholesaler.main.users.owner.dtos.Product
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
-import com.example.e_wholesaler.main.users.owner.dtos.ShopSubProductRemoveRequest
+import com.example.e_wholesaler.main.users.owner.dtos.SubProductAddRequest
+import com.example.e_wholesaler.main.users.owner.dtos.SubProductAddResponse
+import com.example.e_wholesaler.main.users.owner.dtos.SubProductRemoveRequest
+import com.example.e_wholesaler.main.users.owner.dtos.SubProductUpdateRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
@@ -46,27 +49,30 @@ class OwnerClient(private val httpClient: HttpClient) {
     }
 
     suspend fun updateShopDetails(ownerId: Long, shop: Shop): Shop? {
-        return makeApiCall<Shop, Shop>(ownerId, PUT, "/shop", shop)
+        return makeApiCall(ownerId, PUT, "/shop", shop)
     }
 
     suspend fun addNewShop(ownerId: Long, newShop: Shop): Shop? {
-        return makeApiCall<Shop, Shop>(ownerId, POST, "/shop", newShop)
+        return makeApiCall(ownerId, POST, "/shop", newShop)
     }
 
     suspend fun getShopProducts(ownerId: Long, shopId: Long): MutableList<Product>? {
         return makeApiCall<MutableList<Product>, Any>(ownerId, GET, "/shop/$shopId/products", null)
     }
 
-    suspend fun removeShopSubProduct(
+    suspend fun removeShopSubProduct(ownerId: Long, requestDTO: SubProductRemoveRequest): Message? {
+        return makeApiCall(ownerId, DELETE, "/shop/products/shop-sub-product", requestDTO)
+    }
+
+    suspend fun addShopSubProduct(
         ownerId: Long,
-        requestDTO: ShopSubProductRemoveRequest
-    ): Message? {
-        return makeApiCall<Message, ShopSubProductRemoveRequest>(
-            ownerId,
-            DELETE,
-            "/shop/products/shop-sub-product",
-            requestDTO
-        )
+        requestDTO: SubProductAddRequest
+    ): SubProductAddResponse? {
+        return makeApiCall(ownerId, POST, "/shop/products/shop-sub-product", requestDTO)
+    }
+
+    suspend fun updateShopSubProduct(ownerId: Long, requestDTO: SubProductUpdateRequest): Message? {
+        return makeApiCall(ownerId, PUT, "/shop/products/shop-sub-product", requestDTO)
     }
 
     private suspend inline fun <reified ResponseType, reified RequestBodyType> makeApiCall(

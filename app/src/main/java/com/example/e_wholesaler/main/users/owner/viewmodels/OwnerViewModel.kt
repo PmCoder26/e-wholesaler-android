@@ -12,9 +12,12 @@ import com.example.e_wholesaler.main.users.owner.dtos.DailyShopRevenue
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 import com.example.e_wholesaler.main.users.owner.dtos.Product
+import com.example.e_wholesaler.main.users.owner.dtos.QuantityToSellingPrice
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
-import com.example.e_wholesaler.main.users.owner.dtos.ShopSubProductRemoveRequest
 import com.example.e_wholesaler.main.users.owner.dtos.SubProduct
+import com.example.e_wholesaler.main.users.owner.dtos.SubProductAddRequest
+import com.example.e_wholesaler.main.users.owner.dtos.SubProductRemoveRequest
+import com.example.e_wholesaler.main.users.owner.dtos.SubProductUpdateRequest
 import com.example.e_wholesaler.main.users.owner.dtos.formatDateAndGet
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.Details
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.ProductSortType
@@ -166,8 +169,6 @@ open class OwnerViewModel(
         return shopList.value.find { it.id == shopId } ?: Shop()
     }
 
-    fun getCurrentShopId() = shopProductsState.value.shopId
-
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun updateShopDetails(shop: Shop): Boolean {
         return withContext(Dispatchers.IO) {
@@ -220,34 +221,90 @@ open class OwnerViewModel(
     }
 
     fun getProductByName(productName: String): Product {
-        return shopIdVsProducts[currentShopId.value]?.find { it.name == productName }?.copy()
-            ?: Product()
+        return shopIdVsProducts[currentShopId.value]?.find { it.name == productName } ?: Product()
     }
 
     suspend fun removeShopSubProduct(productName: String, subProduct: SubProduct): Boolean =
         withContext(Dispatchers.IO) {
-            val ownerId = ownerId.value ?: return@withContext false
-            val currentShopIdVal = getCurrentShopId() // Get current shop ID
-            val requestDTO = ShopSubProductRemoveRequest(subProduct.id, currentShopIdVal)
-            val removeProductResponse = ownerClient.removeShopSubProduct(ownerId, requestDTO)
-            val hasProductRemoved =
-                removeProductResponse?.message == "Shop sub-product removed successfully"
+            ifNotNull(ownerId.value, currentShopId.value) { ownerId, shopId ->
+                val requestDTO = SubProductRemoveRequest(subProduct.id, shopId)
+                val response = ownerClient.removeShopSubProduct(ownerId, requestDTO)
+                val hasProductRemoved = response?.message == "Shop sub-product removed successfully"
 
-            if (hasProductRemoved) {
-                // 1. Get the current list of products for the shop.
-                val currentProductsForShop =
-                    shopIdVsProducts[currentShopIdVal] ?: return@withContext false
-                // 2. Find the index of the specific product we need to update.
-                val productIndex = currentProductsForShop.indexOfFirst { it.name == productName }
-                if (productIndex == -1) return@withContext false
-                val productToUpdate = currentProductsForShop[productIndex]
-                // 3. Create a NEW list of sub-products with the item removed.
-                val newSubProductsList =
-                    productToUpdate.shopSubProducts.filterNot { it.id == subProduct.id }
-                productToUpdate.shopSubProducts = newSubProductsList
-            }
-            return@withContext hasProductRemoved
+                if (hasProductRemoved) {
+                    // 1. Get the current list of products for the shop.
+                    val currentProductsForShop = shopIdVsProducts[shopId] ?: return@ifNotNull false
+                    // 2. Find the index of the specific product we need to update.
+                    val productIndex =
+                        currentProductsForShop.indexOfFirst { it.name == productName }
+                    if (productIndex == -1) return@ifNotNull false
+                    val productToUpdate = currentProductsForShop[productIndex]
+                    // 3. Create a NEW list of sub-products with the item removed.
+                    val newSubProductsList =
+                        productToUpdate.shopSubProducts.filterNot { it.id == subProduct.id }
+                    productToUpdate.shopSubProducts = newSubProductsList
+                }
+
+                return@ifNotNull hasProductRemoved
+            } ?: return@withContext false
         }
+
+    suspend fun addShopSubProduct(productName: String, subProduct: SubProduct): Boolean =
+        withContext(Dispatchers.IO) {
+            ifNotNull(ownerId.value, currentShopId.value) { ownerId, shopId ->
+                val mrpToSellingMap = mapOf(
+                    subProduct.mrp to QuantityToSellingPrice(
+                        subProduct.quantity, subProduct.sellingPrice,
+                        subProduct.stock
+                    )
+                )
+                val productToUpdate = getProductByName(productName)
+                val requestDTO = SubProductAddRequest(
+                    productToUpdate.name, productToUpdate.category,
+                    productToUpdate.company, mrpToSellingMap, shopId
+                )
+
+                val response = ownerClient.addShopSubProduct(ownerId, requestDTO)
+                val hasAddedSubProduct = response?.idToPriceMap.isNullOrEmpty().not()
+
+                if (hasAddedSubProduct) {
+                    val subProductId = response.idToPriceMap.keys.toList()[0]
+                    val newSubProduct = subProduct.copy(id = subProductId)
+                    val newSubProductList = productToUpdate.shopSubProducts.toList() + newSubProduct
+                    productToUpdate.shopSubProducts = newSubProductList
+                }
+
+                return@ifNotNull hasAddedSubProduct
+            } ?: return@withContext false
+        }
+
+    suspend fun updateShopSubProduct(productName: String, subProduct: SubProduct): Boolean =
+        withContext(Dispatchers.IO) {
+            ifNotNull(ownerId.value, currentShopId.value) { ownerId, shopId ->
+                val requestDTO = SubProductUpdateRequest(
+                    subProduct.id, subProduct.mrp, subProduct.sellingPrice,
+                    subProduct.quantity, subProduct.stock, shopId
+                )
+
+                val response = ownerClient.updateShopSubProduct(ownerId, requestDTO)
+                val hasUpdatedSubProduct =
+                    response?.message == "Shop's sub-product updated successfully"
+
+                if (hasUpdatedSubProduct) {
+                    val productToUpdate = getProductByName(productName)
+                    val newSubProductList = productToUpdate.shopSubProducts.map {
+                        if (it.id == subProduct.id) subProduct.copy() else it
+                    }
+                    productToUpdate.shopSubProducts = newSubProductList
+                }
+
+                return@ifNotNull hasUpdatedSubProduct
+            } ?: return@withContext false
+        }
+
+    private inline fun <T1, T2, R> ifNotNull(a: T1?, b: T2?, block: (a: T1, b: T2) -> R): R? {
+        return if (a != null && b != null) block(a, b) else null
+    }
 
 }
 

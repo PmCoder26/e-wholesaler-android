@@ -235,14 +235,32 @@ fun OwnerScreen() {
                 key1 = productName,
                 key2 = trigger
             ) {
-                value = ownerViewModel.getProductByName(productName)
+                value = ownerViewModel.getProductByName(productName).copy()
             }
 
             ProductDetailsScreen(
                 product = selectedProduct,
                 onBackClicked = { navCon.popBackStack() },
-                onEditSubProductClicked = { },
-                onAddSubProductClicked = { },
+                onEditSubProductConfirm = { subProduct ->
+                    scope.launch {
+                        val hasUpdatedSubProduct =
+                            ownerViewModel.updateShopSubProduct(selectedProduct.name, subProduct)
+                        val message =
+                            if (hasUpdatedSubProduct) "Product variant updated successfully" else "Failed to update product variant"
+                        showToast(context, message)
+                        if (hasUpdatedSubProduct) trigger++
+                    }
+                },
+                onAddSubProductConfirm = { subProduct ->
+                    scope.launch {
+                        val hasAddedSubProduct =
+                            ownerViewModel.addShopSubProduct(selectedProduct.name, subProduct)
+                        val message =
+                            if (hasAddedSubProduct) "Product variant added successfully" else "Failed to add product variant"
+                        showToast(context, message)
+                        if (hasAddedSubProduct) trigger++
+                    }
+                },
                 onDeleteSubProductConfirm = { subProduct ->
                     scope.launch {
                         val hasRemoved =

@@ -3,15 +3,11 @@ package com.example.e_wholesaler.main.users.owner.dtos
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class SubProduct(
-    val id: Long = -1,
+data class SubProductUpdateRequest(
+    val id: Long,
     val mrp: Double,
     val sellingPrice: Double,
     val quantity: Int,
     val stock: Long,
+    val shopId: Long
 )
-
-
-fun List<SubProduct>.existsByMrp(mrp: Double): Boolean {
-    return this.find { it.mrp == mrp } != null
-}
