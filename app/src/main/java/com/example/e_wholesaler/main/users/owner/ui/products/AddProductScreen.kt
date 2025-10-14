@@ -1,8 +1,16 @@
 package com.example.e_wholesaler.main.users.owner.ui.products
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,8 +19,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,7 +47,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_wholesaler.main.users.owner.dtos.Product
 import com.example.e_wholesaler.main.users.owner.dtos.SubProduct
-import com.example.e_wholesaler.main.users.owner.ui.*
+import com.example.e_wholesaler.main.users.owner.ui.CardBackgroundWhite
+import com.example.e_wholesaler.main.users.owner.ui.IconColorWhite
+import com.example.e_wholesaler.main.users.owner.ui.TopBarBlue
 import java.util.UUID
 
 private data class SubProductFormState(
@@ -52,7 +79,7 @@ fun AddProductScreen(
     var productCategory by remember { mutableStateOf("") }
     var productCompany by remember { mutableStateOf("") }
     // Start with one sub-product form for better UX
-    var subProductForms by remember { mutableStateOf(listOf(SubProductFormState())) }
+    var subProductForms by remember { mutableStateOf(emptyList<SubProductFormState>()) }
 
     val isFormValid by remember {
         derivedStateOf {
@@ -80,7 +107,6 @@ fun AddProductScreen(
         },
         containerColor = BackgroundScreen,
         bottomBar = {
-            Surface(shadowElevation = 4.dp) {
                 Button(
                     onClick = {
                         val finalSubProducts = subProductForms.map {
@@ -99,18 +125,23 @@ fun AddProductScreen(
                         )
                         onSaveProduct(newProduct)
                     },
-                    modifier = Modifier.fillMaxWidth().padding(16.dp).height(50.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = TopBarBlue),
                     shape = RoundedCornerShape(12.dp),
                     enabled = isFormValid
                 ) {
-                    Text("Save Product", color = Color.White, fontSize = 16.sp)
+                    Text("Add Product", color = Color.White, fontSize = 16.sp)
                 }
-            }
         }
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
@@ -136,25 +167,20 @@ fun AddProductScreen(
             }
 
             itemsIndexed(subProductForms, key = { _, item -> item.id }) { index, formState ->
-                AnimatedVisibility(
-                    visible = true, // Always visible in the list
-                    enter = fadeIn() + slideInVertically(),
-                    exit = fadeOut() + slideOutVertically()
-                ) {
-                    SubProductInputCard(
-                        formState = formState,
-                        onStateChange = { newState ->
-                            subProductForms = subProductForms.toMutableList().also { it[index] = newState }
-                        },
-                        onRemove = {
-                            if (subProductForms.size > 1) {
-                                subProductForms = subProductForms.filterNot { it.id == formState.id }
-                            }
-                        },
-                        canBeRemoved = subProductForms.size > 1,
-                        variantNumber = index + 1
-                    )
-                }
+                SubProductInputCard(
+                    formState = formState,
+                    onStateChange = { newState ->
+                        subProductForms =
+                            subProductForms.toMutableList().also { it[index] = newState }
+                    },
+                    onRemove = {
+                        if (subProductForms.isNotEmpty()) {
+                            subProductForms = subProductForms.filterNot { it.id == formState.id }
+                        }
+                    },
+                    canBeRemoved = subProductForms.isNotEmpty(),
+                    variantNumber = index + 1
+                )
             }
 
             item {
@@ -169,7 +195,7 @@ fun AddProductScreen(
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add Variant")
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add Another Variant")
+                    Text(if (subProductForms.isEmpty()) "Add Variant" else "Add Another Variant")
                 }
             }
         }

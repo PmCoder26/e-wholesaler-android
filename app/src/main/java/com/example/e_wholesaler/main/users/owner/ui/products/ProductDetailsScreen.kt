@@ -296,7 +296,7 @@ fun SubProductCard(
 
             // Buttons column on the right
             Column(
-                verticalArrangement = Arrangement.SpaceAround,
+                verticalArrangement = Arrangement.spacedBy(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 IconButton(

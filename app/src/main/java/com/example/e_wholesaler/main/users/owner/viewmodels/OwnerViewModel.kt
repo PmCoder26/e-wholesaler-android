@@ -93,7 +93,12 @@ open class OwnerViewModel(
     private var productSortType = MutableStateFlow(ProductSortType.NAME)
     private var shopIdVsProducts = mutableMapOf<Long, MutableList<Product>>()
     private var currentShopId = MutableStateFlow(shopList.value.firstOrNull()?.id)
-    val shopProductsState = combine(currentShopId, productSortType) { currentId, sortType ->
+    private var shopProductsUpdateTrigger = MutableStateFlow(0)
+    val shopProductsState = combine(
+        currentShopId,
+        productSortType,
+        shopProductsUpdateTrigger
+    ) { currentId, sortType, trigger ->
         if (currentId != null) {
             val list = shopIdVsProducts[currentId] ?: emptyList()
             val sortedList = when (sortType) {
@@ -300,6 +305,39 @@ open class OwnerViewModel(
 
                 return@ifNotNull hasUpdatedSubProduct
             } ?: return@withContext false
+        }
+
+    suspend fun addProduct(product: Product): Boolean =
+        withContext(Dispatchers.IO) {
+            ifNotNull(ownerId.value, currentShopId.value) { ownerId, shopId ->
+                val productExists =
+                    shopIdVsProducts[shopId]?.any { it.name == product.name } == true
+                if (productExists) return@withContext false
+                val mrpToSellingMap = product.shopSubProducts.associate { sb ->
+                    sb.mrp to QuantityToSellingPrice(sb.quantity, sb.sellingPrice, sb.stock)
+                }
+                val requestDTO = SubProductAddRequest(
+                    product.name, product.category,
+                    product.company, mrpToSellingMap, shopId
+                )
+
+                // using the same api for adding products and sub-products
+                val response = ownerClient.addShopSubProduct(ownerId, requestDTO)
+                if (response == null) return@withContext false
+
+                val updatedSubProducts = product.shopSubProducts.mapNotNull { sub ->
+                    val createdSubProduct =
+                        response.idToPriceMap.entries.find { it.value == sub.sellingPrice }
+                            ?: return@mapNotNull null
+                    sub.copy(id = createdSubProduct.key, sellingPrice = createdSubProduct.value)
+                }
+                val newProduct = product.copy(shopSubProducts = updatedSubProducts)
+                shopIdVsProducts[shopId] =
+                    ((shopIdVsProducts[shopId] ?: emptyList()) + newProduct) as MutableList
+                shopProductsUpdateTrigger.value++
+
+                true
+            } ?: false
         }
 
     private inline fun <T1, T2, R> ifNotNull(a: T1?, b: T2?, block: (a: T1, b: T2) -> R): R? {
