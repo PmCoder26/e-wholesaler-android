@@ -17,8 +17,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.e_wholesaler.auth.LoginScreen
 import com.example.e_wholesaler.auth.SignUpScreen
 import com.example.e_wholesaler.auth.utils.UserType
-import com.example.e_wholesaler.main.users.owner.ui.OwnerScreen
-import com.example.e_wholesaler.main.users.owner.ui.getViewModelStoreOwner
+import com.example.e_wholesaler.main.users.owner.ui.owner.OwnerScreen
+import com.example.e_wholesaler.main.users.owner.ui.owner.getViewModelStoreOwner
 import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.compose.koinViewModel

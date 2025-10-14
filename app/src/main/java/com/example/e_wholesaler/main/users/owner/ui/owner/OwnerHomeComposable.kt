@@ -1,4 +1,4 @@
-package com.example.e_wholesaler.main.users.owner.ui
+package com.example.e_wholesaler.main.users.owner.ui.owner
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -70,6 +70,8 @@ import com.example.e_wholesaler.main.users.owner.dtos.Product
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
 import com.example.e_wholesaler.main.users.owner.dtos.hasDifferentData
 import com.example.e_wholesaler.main.users.owner.dtos.hasNoBlankField
+import com.example.e_wholesaler.main.users.owner.ui.products.ProductDetailsScreen
+import com.example.e_wholesaler.main.users.owner.ui.products.ShopProductsScreen
 import com.example.e_wholesaler.main.users.owner.viewmodels.NullOwnerViewModel
 import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.Details
@@ -130,11 +132,11 @@ fun OwnerScreen() {
         }
 
         composable("RevenueScreen") {
-            RevenueScreen()
+            _root_ide_package_.com.example.e_wholesaler.main.users.owner.ui.RevenueScreen()
         }
 
         composable("ShopsScreen") {
-            ShopsScreen()
+            _root_ide_package_.com.example.e_wholesaler.main.users.owner.ui.ShopsScreen()
         }
 
         composable(
@@ -148,7 +150,7 @@ fun OwnerScreen() {
                 value = ownerViewModel.getShopById(currentShopId)
             }
 
-            ShopDetailsScreen(
+            _root_ide_package_.com.example.e_wholesaler.main.users.owner.ui.ShopDetailsScreen(
                 shopDetail = currentShop,
                 onBackClicked = { navCon.popBackStack() },
                 onEditDetailsClicked = { navCon.navigate("EditShopDetailsScreen/$currentShopId") }
@@ -166,7 +168,7 @@ fun OwnerScreen() {
                 value = ownerViewModel.getShopById(currentShopId)
             }
 
-            EditShopDetailsScreen(
+            _root_ide_package_.com.example.e_wholesaler.main.users.owner.ui.EditShopDetailsScreen(
                 shop = currentShop,
                 onBackClicked = { navCon.popBackStack() },
                 onSaveClicked = { changedShop ->
@@ -187,7 +189,7 @@ fun OwnerScreen() {
         }
 
         composable("AddShopScreen") {
-            AddShopScreen(
+            _root_ide_package_.com.example.e_wholesaler.main.users.owner.ui.AddShopScreen(
                 onCancelClicked = { navCon.popBackStack() },
                 onSaveClicked = { newShop ->
                     scope.launch {
@@ -214,7 +216,7 @@ fun OwnerScreen() {
                 products = shopProductsState.products,
                 onBackClicked = { navCon.popBackStack() },
                 onShopSelected = { ownerViewModel.getShopProducts(it) },
-                onAddProductClicked = {},
+                onAddProductClicked = { },
                 onFilterChange = { ownerViewModel.updateProductSortType(it) },
                 onInfoButtonClick = { clickedProduct -> navCon.navigate("ProductDetailsScreen/${clickedProduct.name}") }
             )

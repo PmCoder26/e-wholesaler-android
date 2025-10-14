@@ -65,6 +65,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_wholesaler.R
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
+import com.example.e_wholesaler.main.users.owner.ui.owner.getIsPreview
+import com.example.e_wholesaler.main.users.owner.ui.owner.getViewModelStoreOwner
 import com.example.e_wholesaler.main.users.owner.viewmodels.NullOwnerViewModel
 import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.ShopSortType

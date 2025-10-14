@@ -50,8 +50,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_wholesaler.auth.utils.Gender
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
-import com.example.e_wholesaler.main.users.owner.ui.getIsPreview
-import com.example.e_wholesaler.main.users.owner.ui.getViewModelStoreOwner
+import com.example.e_wholesaler.main.users.owner.ui.owner.getIsPreview
+import com.example.e_wholesaler.main.users.owner.ui.owner.getViewModelStoreOwner
 import com.example.e_wholesaler.navigation_viewmodel.NavigationViewModel
 import com.example.e_wholesaler.navigation_viewmodel.NullNavigationViewModel
 import kotlinx.coroutines.Dispatchers
