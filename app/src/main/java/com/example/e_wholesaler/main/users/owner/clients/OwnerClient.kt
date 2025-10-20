@@ -11,6 +11,7 @@ import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.Message
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 import com.example.e_wholesaler.main.users.owner.dtos.Product
+import com.example.e_wholesaler.main.users.owner.dtos.ProductRemoveRequest
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
 import com.example.e_wholesaler.main.users.owner.dtos.SubProductAddRequest
 import com.example.e_wholesaler.main.users.owner.dtos.SubProductAddResponse
@@ -73,6 +74,10 @@ class OwnerClient(private val httpClient: HttpClient) {
 
     suspend fun updateShopSubProduct(ownerId: Long, requestDTO: SubProductUpdateRequest): Message? {
         return makeApiCall(ownerId, PUT, "/shop/products/shop-sub-product", requestDTO)
+    }
+
+    suspend fun removeProduct(ownerId: Long, requestDTO: ProductRemoveRequest): Message? {
+        return makeApiCall(ownerId, DELETE, "/shop/products/product", requestDTO)
     }
 
     private suspend inline fun <reified ResponseType, reified RequestBodyType> makeApiCall(

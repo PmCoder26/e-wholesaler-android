@@ -12,6 +12,7 @@ import com.example.e_wholesaler.main.users.owner.dtos.DailyShopRevenue
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 import com.example.e_wholesaler.main.users.owner.dtos.Product
+import com.example.e_wholesaler.main.users.owner.dtos.ProductRemoveRequest
 import com.example.e_wholesaler.main.users.owner.dtos.QuantityToSellingPrice
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
 import com.example.e_wholesaler.main.users.owner.dtos.SubProduct
@@ -337,6 +338,26 @@ open class OwnerViewModel(
                 shopProductsUpdateTrigger.value++
 
                 true
+            } ?: false
+        }
+
+    suspend fun removeProduct(product: Product): Boolean =
+        withContext(Dispatchers.IO) {
+            ifNotNull(ownerId.value, currentShopId.value) { ownerId, shopId ->
+                val productExists =
+                    shopIdVsProducts[shopId]?.any { it.name == product.name } == true
+                if (!productExists) return@withContext false
+
+                val requestDTO = ProductRemoveRequest(shopId, product.name)
+                val response = ownerClient.removeProduct(ownerId, requestDTO)
+
+                if (response != null && response.message.contains("Product deleted successfully")) {
+                    shopIdVsProducts[shopId]?.remove(product)
+                    shopProductsUpdateTrigger.value++
+                    return@withContext true
+                }
+
+                false
             } ?: false
         }
 

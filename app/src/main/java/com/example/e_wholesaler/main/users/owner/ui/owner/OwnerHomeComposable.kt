@@ -276,6 +276,15 @@ fun OwnerScreen() {
                         showToast(context, message)
                         if (hasRemoved) trigger++
                     }
+                },
+                onDeleteProductConfirm = { product ->
+                    scope.launch {
+                        val hasRemoved = ownerViewModel.removeProduct(product)
+                        val message =
+                            if (hasRemoved) "Product removed successfully" else "Failed to remove product"
+                        showToast(context, message)
+                        navCon.popBackStack()
+                    }
                 }
             )
         }

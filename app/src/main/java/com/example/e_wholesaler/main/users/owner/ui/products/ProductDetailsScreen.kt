@@ -81,7 +81,8 @@ fun ProductDetailsScreenPreview() {
         onBackClicked = {},
         onAddSubProductConfirm = { subProduct -> },
         onEditSubProductConfirm = { _ -> },
-        onDeleteSubProductConfirm = { _ -> }
+        onDeleteSubProductConfirm = { _ -> },
+        onDeleteProductConfirm = { _ -> }
     )
 }
 
@@ -92,10 +93,12 @@ fun ProductDetailsScreen(
     onBackClicked: () -> Unit,
     onAddSubProductConfirm: (SubProduct) -> Unit,
     onEditSubProductConfirm: (SubProduct) -> Unit,
-    onDeleteSubProductConfirm: (SubProduct) -> Unit
+    onDeleteSubProductConfirm: (SubProduct) -> Unit,
+    onDeleteProductConfirm: (Product) -> Unit
 ) {
     var subProductToDelete by remember { mutableStateOf<SubProduct?>(null) }
     var showAddVariantDialog by remember { mutableStateOf(false) }
+    var showDeleteProductDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     Scaffold(
@@ -116,18 +119,41 @@ fun ProductDetailsScreen(
         },
         containerColor = BackgroundScreen,
         bottomBar = {
-            Button(
-                onClick = { showAddVariantDialog = true },
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
-                    .height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = TopBarBlue),
-                shape = RoundedCornerShape(8.dp)
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Variant", tint = Color.White)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Add New Variant", color = Color.White, fontSize = 16.sp)
+                Button(
+                    onClick = { showAddVariantDialog = true },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = TopBarBlue),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Variant", tint = Color.White)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Add Variant", color = Color.White, fontSize = 16.sp)
+                }
+
+                Button(
+                    onClick = { showDeleteProductDialog = true },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = DeleteRed),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Remove Product",
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Product", color = Color.White, fontSize = 16.sp)
+                }
             }
         }
     ) { paddingValues ->
@@ -140,6 +166,17 @@ fun ProductDetailsScreen(
                     else onAddSubProductConfirm(subProduct)
                     showAddVariantDialog = false
                 }
+            )
+        }
+
+        if (showDeleteProductDialog) {
+            DeleteProductConfirmationDialog(
+                product = product,
+                onConfirm = {
+                    onDeleteProductConfirm(product)
+                    showDeleteProductDialog = false
+                },
+                onDismiss = { showDeleteProductDialog = false }
             )
         }
 
@@ -512,6 +549,26 @@ fun DeleteConfirmationDialog(
         onDismissRequest = onDismiss,
         title = { Text("Confirm Deletion") },
         text = { Text("Are you sure you want to delete the variant with selling price ₹${subProduct.sellingPrice}?") },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = DeleteRed)
+            ) { Text("Confirm", color = Color.White) }
+        },
+        dismissButton = { OutlinedButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@Composable
+fun DeleteProductConfirmationDialog(
+    product: Product,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirm Deletion") },
+        text = { Text("Are you sure you want to delete the product ${product.name}?") },
         confirmButton = {
             Button(
                 onClick = onConfirm,
