@@ -44,6 +44,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,10 +73,13 @@ import com.example.e_wholesaler.main.users.owner.dtos.hasDifferentData
 import com.example.e_wholesaler.main.users.owner.dtos.hasNoBlankField
 import com.example.e_wholesaler.main.users.owner.ui.AddShopScreen
 import com.example.e_wholesaler.main.users.owner.ui.EditShopDetailsScreen
+import com.example.e_wholesaler.main.users.owner.ui.RevenueScreen
 import com.example.e_wholesaler.main.users.owner.ui.ShopDetailsScreen
+import com.example.e_wholesaler.main.users.owner.ui.ShopsScreen
 import com.example.e_wholesaler.main.users.owner.ui.products.AddProductScreen
 import com.example.e_wholesaler.main.users.owner.ui.products.ProductDetailsScreen
 import com.example.e_wholesaler.main.users.owner.ui.products.ShopProductsScreen
+import com.example.e_wholesaler.main.users.owner.ui.workers.WorkersScreen
 import com.example.e_wholesaler.main.users.owner.viewmodels.NullOwnerViewModel
 import com.example.e_wholesaler.main.users.owner.viewmodels.OwnerViewModel
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.Details
@@ -136,11 +140,11 @@ fun OwnerScreen() {
         }
 
         composable("RevenueScreen") {
-            _root_ide_package_.com.example.e_wholesaler.main.users.owner.ui.RevenueScreen()
+            RevenueScreen()
         }
 
         composable("ShopsScreen") {
-            _root_ide_package_.com.example.e_wholesaler.main.users.owner.ui.ShopsScreen()
+            ShopsScreen()
         }
 
         composable(
@@ -305,6 +309,21 @@ fun OwnerScreen() {
                 }
             )
         }
+
+        composable(route = "WorkersScreen") {
+            val shopsState by ownerViewModel.shopsState.collectAsState()
+            val shopIdVsName by remember(shopsState) {
+                mutableStateOf(shopsState.shops.associate { it.id to it.name })
+            }
+
+            WorkersScreen(
+                shops = shopIdVsName,
+                onBackClicked = { navCon.popBackStack() },
+                onAddClicked = { },
+                getWorkersForShop = { shopId -> ownerViewModel.getShopWorkers(shopId) }
+            )
+        }
+
     }
 }
 
@@ -313,7 +332,7 @@ fun OwnerScreen() {
 @Preview(showBackground = true)
 @Composable
 fun OwnerHomeScreenPreview() {
-    OwnerHomeScreen(rememberNavController(), {}, "null", null)
+    OwnerHomeScreen(rememberNavController(), {}, "null", HomeScreenDetails(0, 0, 0, 0.0))
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -393,7 +412,7 @@ fun OwnerHomeScreen(
                 koinViewModel<NavigationViewModel>(
                     viewModelStoreOwner = getViewModelStoreOwner()
                 )
-            } else null
+            } else NullNavigationViewModel()
             val ownerViewModel = if (!getIsPreview()) {
                 koinViewModel<OwnerViewModel>(
                     viewModelStoreOwner = getViewModelStoreOwner()
