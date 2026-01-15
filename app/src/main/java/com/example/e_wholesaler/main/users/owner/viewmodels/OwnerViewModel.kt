@@ -30,6 +30,7 @@ import com.example.e_wholesaler.main.users.owner.viewmodels.utils.TotalShopReven
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -71,9 +72,9 @@ open class OwnerViewModel(
     )
     val totalRevenue = combine(revenueDetails, shopRevenueSortType) { revenueDetails, sortType ->
         val sortedList = when (sortType) {
-            ShopSortType.REVENUE -> revenueDetails.dailyShopRevenueList.sortedByDescending { it -> it.dailyRevenue }
-            ShopSortType.NAME -> revenueDetails.dailyShopRevenueList.sortedBy { it -> it.shopName }
-            ShopSortType.CITY -> revenueDetails.dailyShopRevenueList.sortedBy { it -> it.city }
+            ShopSortType.REVENUE -> revenueDetails.dailyShopRevenueList.sortedByDescending { it.dailyRevenue }
+            ShopSortType.NAME -> revenueDetails.dailyShopRevenueList.sortedBy { it.shopName }
+            ShopSortType.CITY -> revenueDetails.dailyShopRevenueList.sortedBy { it.city }
         }
         TotalShopRevenue(
             totalRevenue = revenueDetails.totalRevenue,
@@ -100,7 +101,7 @@ open class OwnerViewModel(
         currentShopIdForProducts,
         productSortType,
         shopProductsUpdateTrigger
-    ) { currentId, sortType, trigger ->
+    ) { currentId, sortType, _ ->
         if (currentId != null) {
             val list = shopIdVsProducts[currentId] ?: emptyList()
             val sortedList = when (sortType) {
@@ -115,6 +116,12 @@ open class OwnerViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), ShopProductsState())
 
     private var shopIdVsWorkers = mutableMapOf<Long, MutableList<Worker>>()
+    private var _currentShopIdForWorkers = MutableStateFlow(shopList.value.firstOrNull()?.id)
+
+    val currentShopIdForWorkers = _currentShopIdForWorkers.asStateFlow()
+    private var _workerTrigger = MutableStateFlow(0)
+    val workerTrigger = _workerTrigger.asStateFlow()
+
 
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -376,6 +383,40 @@ open class OwnerViewModel(
 
                 response.workerList
             }
+        }
+
+    fun getShopWorkerById(shopId: Long, workerId: Long): Worker =
+        shopIdVsWorkers[shopId]?.find { it.id == workerId } ?: Worker()
+
+    fun setCurrentShopIdForWorkers(shopId: Long) {
+        viewModelScope.launch { _currentShopIdForWorkers.value = shopId }
+    }
+
+    suspend fun addShopWorker(worker: Worker): Boolean =
+        withContext(Dispatchers.IO) {
+            ifNotNull(ownerId.value, currentShopIdForWorkers.value) { ownerId, shopId ->
+                val addedWorker =
+                    ownerClient.addShopWorker(ownerId, worker) ?: return@ifNotNull false
+                val newWorkerList = shopIdVsWorkers[shopId]?.toMutableList() ?: mutableListOf()
+                newWorkerList.add(addedWorker)
+                shopIdVsWorkers[shopId] = newWorkerList
+                _workerTrigger.value += 1
+                return@ifNotNull true
+            } ?: false
+        }
+
+    suspend fun updateShopWorker(worker: Worker): Boolean =
+        withContext(Dispatchers.IO) {
+            ifNotNull(ownerId.value, currentShopIdForWorkers.value) { ownerId, shopId ->
+                val updatedWorker =
+                    ownerClient.updateShopWorker(ownerId, worker) ?: return@ifNotNull false
+                val oldWorkerList = shopIdVsWorkers[shopId] ?: mutableListOf()
+                val newWorkerList = oldWorkerList.filterNot { it.id == worker.id }.toMutableList()
+                newWorkerList.add(updatedWorker)
+                shopIdVsWorkers[shopId] = newWorkerList
+                _workerTrigger.value += 1
+                return@ifNotNull true
+            } ?: false
         }
 
     private inline fun <T1, T2, R> ifNotNull(a: T1?, b: T2?, block: (a: T1, b: T2) -> R): R? {

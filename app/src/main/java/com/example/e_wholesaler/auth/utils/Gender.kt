@@ -1,6 +1,9 @@
-package com.example.e_wholesaler.auth.utils;
+package com.example.e_wholesaler.auth.utils
 
-public enum Gender {
+import kotlinx.serialization.Serializable
+
+@Serializable
+enum class Gender {
     MALE,
     FEMALE
 }

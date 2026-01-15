@@ -1,6 +1,8 @@
 package com.example.e_wholesaler.main.users.owner.clients
 
+import android.content.Context
 import android.util.Log
+import android.widget.Toast
 import com.example.e_wholesaler.ktor_client.RequestType
 import com.example.e_wholesaler.ktor_client.RequestType.DELETE
 import com.example.e_wholesaler.ktor_client.RequestType.GET
@@ -18,6 +20,7 @@ import com.example.e_wholesaler.main.users.owner.dtos.SubProductAddRequest
 import com.example.e_wholesaler.main.users.owner.dtos.SubProductAddResponse
 import com.example.e_wholesaler.main.users.owner.dtos.SubProductRemoveRequest
 import com.example.e_wholesaler.main.users.owner.dtos.SubProductUpdateRequest
+import com.example.e_wholesaler.main.users.owner.dtos.Worker
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
@@ -26,11 +29,14 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.example.project.ktor_client.HOST_URL
 import org.parimal.utils.ApiResponse
 
-class OwnerClient(private val httpClient: HttpClient) {
+class OwnerClient(private val httpClient: HttpClient, private val context: Context) {
 
     private val OWNER_BASE_URL = "http://$HOST_URL:8090/api/v1/shops/owner"
 
@@ -85,6 +91,14 @@ class OwnerClient(private val httpClient: HttpClient) {
         return makeApiCall<ShopAndWorkers, Any>(ownerId, GET, "/shop/$shopId/workers", null)
     }
 
+    suspend fun addShopWorker(ownerId: Long, worker: Worker): Worker? {
+        return makeApiCall(ownerId, POST, "/shops/worker", worker)
+    }
+
+    suspend fun updateShopWorker(ownerId: Long, worker: Worker): Worker? {
+        return makeApiCall(ownerId, PUT, "/shops/worker", worker)
+    }
+
     private suspend inline fun <reified ResponseType, reified RequestBodyType> makeApiCall(
         ownerId: Long, requestType: RequestType, url: String, requestBody: RequestBodyType?
     ): ResponseType? {
@@ -115,12 +129,23 @@ class OwnerClient(private val httpClient: HttpClient) {
                     contentType(ContentType.Application.Json)
                     requestBody?.let { setBody(it) }
                 }
-            }.body<ApiResponse<ResponseType>>()
-            return apiResponse.data
+            }
+            val body = apiResponse.body<ApiResponse<ResponseType>>()
+
+            if (apiResponse.status == HttpStatusCode.OK) return body.data
+            else {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        body.error?.message ?: "Something went wrong",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                return null
+            }
         } catch (e: Exception) {
             Log.e("Api call error: ", e.message.toString())
             return null
         }
     }
-
 }

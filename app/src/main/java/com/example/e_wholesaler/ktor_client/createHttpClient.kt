@@ -25,6 +25,11 @@ import org.koin.java.KoinJavaComponent.inject
 import org.parimal.auth.TokenManager
 import org.parimal.utils.ApiResponse
 
+private val commonJson = Json {
+    ignoreUnknownKeys = true
+    encodeDefaults = true // Crucial: Ensures default values like Gender.MALE are included in JSON
+}
+
 fun createHttpClientForAuth(engine: HttpClientEngine): HttpClient {
     return HttpClient(engine) {
         install(Logging){
@@ -37,9 +42,7 @@ fun createHttpClientForAuth(engine: HttpClientEngine): HttpClient {
         }
         install(ContentNegotiation){
             json(
-                json = Json {
-                    ignoreUnknownKeys = true        // helpful if unknown data comes, hence preventing from crashing.
-                },
+                json = commonJson,
                 contentType = ContentType.Application.Json
             )
         }
@@ -58,10 +61,7 @@ fun createHttpClientMain(engine: HttpClientEngine, tokenManager: TokenManager): 
         }
         install(ContentNegotiation) {
             json(
-                json = Json {
-                    ignoreUnknownKeys =
-                        true        // helpful if unknown data comes, hence preventing from crashing.
-                },
+                json = commonJson,
                 contentType = ContentType.Application.Json
             )
         }

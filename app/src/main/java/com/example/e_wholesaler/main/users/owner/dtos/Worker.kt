@@ -5,13 +5,13 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Worker(
-    val id: Long,
-    val name: String,
-    val gender: Gender,
-    val mobNo: String,
-    val address: String,
-    val city: String,
-    val state: String,
-    val shopId: Long,
-    val salary: Double
+    val id: Long = -1,
+    val name: String = "Worker Name",
+    val gender: Gender = Gender.MALE,
+    val mobNo: String = "Mobile Number",
+    val address: String = "Address",
+    val city: String = "City",
+    val state: String = "State",
+    val shopId: Long = -1,
+    val salary: Double = 0.0
 )

@@ -1,6 +1,7 @@
 package com.example.e_wholesaler.main.users.owner.ui.workers
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,8 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
@@ -42,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -97,25 +97,39 @@ fun WorkersScreenPreview() {
     )
 
     WorkersScreen(
+        -1,
         shops = sampleShops,
+        workerTrigger = 0,
         onBackClicked = {},
         onAddClicked = {},
-        getWorkersForShop = { sampleWorkers }
+        onWorkerCardClick = { _ -> },
+        getWorkersForShop = { sampleWorkers },
+        onCurrentShopIdForWorkersChange = {}
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkersScreen(
+    currentShopId: Long?,
     shops: Map<Long, String>,
+    workerTrigger: Int,
     onBackClicked: () -> Unit,
     onAddClicked: (shopId: Long) -> Unit,
-    getWorkersForShop: suspend (shopId: Long) -> List<Worker>
+    onWorkerCardClick: (workerId: Long) -> Unit,
+    getWorkersForShop: suspend (shopId: Long) -> List<Worker>,
+    onCurrentShopIdForWorkersChange: (shopId: Long) -> Unit
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedShopId by remember { mutableStateOf(shops.keys.firstOrNull()) }
+    val scope = rememberCoroutineScope()
 
-    val workers by produceState(initialValue = emptyList(), key1 = selectedShopId) {
+    var searchQuery by remember { mutableStateOf("") }
+    val selectedShopId = currentShopId
+
+    val workers by produceState(
+        initialValue = emptyList(),
+        key1 = selectedShopId,
+        key2 = workerTrigger
+    ) {
         value = selectedShopId?.let { getWorkersForShop(it) } ?: emptyList()
     }
 
@@ -154,7 +168,7 @@ fun WorkersScreen(
             ShopSelector(
                 shops = shops,
                 selectedShopId = selectedShopId,
-                onShopSelected = { selectedShopId = it }
+                onShopSelected = onCurrentShopIdForWorkersChange
             )
             SearchBar(searchQuery = searchQuery, onQueryChange = { searchQuery = it })
 
@@ -168,6 +182,7 @@ fun WorkersScreen(
                 items(filteredWorkers, key = { it.id }) { worker ->
                     WorkerCard(
                         worker = worker,
+                        onWorkerCardClick = onWorkerCardClick,
                         onEditClicked = { /* TODO: Handle Edit */ },
                         onDeleteClicked = { /* TODO: Handle Delete */ }
                     )
@@ -258,9 +273,16 @@ fun SearchBar(searchQuery: String, onQueryChange: (String) -> Unit) {
 }
 
 @Composable
-fun WorkerCard(worker: Worker, onEditClicked: () -> Unit, onDeleteClicked: () -> Unit) {
+fun WorkerCard(
+    worker: Worker,
+    onWorkerCardClick: (workerId: Long) -> Unit,
+    onEditClicked: () -> Unit,
+    onDeleteClicked: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onWorkerCardClick(worker.id) },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackgroundWhite),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -275,9 +297,9 @@ fun WorkerCard(worker: Worker, onEditClicked: () -> Unit, onDeleteClicked: () ->
                 modifier = Modifier
                     .size(50.dp)
                     .clip(CircleShape)
-                    .background(Color.LightGray.copy(alpha = 0.3f))
+                    .background(TopBarBlue.copy(alpha = 0.1f))
                     .padding(8.dp),
-                tint = TextSecondary
+                tint = TopBarBlue
             )
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -293,15 +315,6 @@ fun WorkerCard(worker: Worker, onEditClicked: () -> Unit, onDeleteClicked: () ->
                     color = TextPrimary
                 )
                 Text(worker.mobNo, fontSize = 14.sp, color = TextSecondary)
-            }
-
-            Column {
-                IconButton(onClick = onEditClicked) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit", tint = TopBarBlue)
-                }
-                IconButton(onClick = onDeleteClicked) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = DeleteRed)
-                }
             }
         }
     }
