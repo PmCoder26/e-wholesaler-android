@@ -69,7 +69,6 @@ import androidx.navigation.navArgument
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.Product
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
-import com.example.e_wholesaler.main.users.owner.dtos.Worker
 import com.example.e_wholesaler.main.users.owner.dtos.hasDifferentData
 import com.example.e_wholesaler.main.users.owner.dtos.hasNoBlankField
 import com.example.e_wholesaler.main.users.owner.ui.AddShopScreen
@@ -319,12 +318,10 @@ fun OwnerScreen() {
                 mutableStateOf(shopsState.shops.associate { it.id to it.name })
             }
             val currentShopIdForWorkers by ownerViewModel.currentShopIdForWorkers.collectAsState()
-            val workerTrigger by ownerViewModel.workerTrigger.collectAsState()
 
             WorkersScreen(
                 currentShopId = currentShopIdForWorkers,
                 shops = shopIdVsName,
-                workerTrigger = workerTrigger,
                 onBackClicked = { navCon.popBackStack() },
                 onAddClicked = { navCon.navigate("WorkerAddUpdateScreen") },
                 onWorkerCardClick = { workerId -> navCon.navigate("WorkerDetailsScreen/$workerId") },
@@ -341,16 +338,23 @@ fun OwnerScreen() {
         ) {
             val shopId = ownerViewModel.currentShopIdForWorkers.collectAsState().value ?: -1
             val workerId = it.arguments?.getLong("workerId") ?: -1
-            val workerTrigger by ownerViewModel.workerTrigger.collectAsState()
-            val worker by produceState(initialValue = Worker(), key1 = workerTrigger) {
-                value = ownerViewModel.getShopWorkerById(shopId, workerId)
+            val worker by remember {
+                mutableStateOf(ownerViewModel.getShopWorkerById(shopId, workerId))
             }
 
             WorkerDetailsScreen(
                 worker = worker,
                 onBackClicked = { navCon.popBackStack() },
                 onEditClicked = { navCon.navigate("WorkerAddUpdateScreen/${it.id}") },
-                onDeleteClicked = { }
+                onDeleteClicked = {
+                    scope.launch {
+                        val hasWorkerDeleted = ownerViewModel.deleteShopWorker(workerId)
+                        val message =
+                            if (hasWorkerDeleted) "Worker deleted successfully" else "Unable to delete the worker or no such worker exists"
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        navCon.popBackStack()
+                    }
+                }
             )
         }
 
@@ -383,8 +387,8 @@ fun OwnerScreen() {
         ) {
             val shopId = ownerViewModel.currentShopIdForWorkers.collectAsState().value ?: -1
             val workerId = it.arguments?.getLong("workerId") ?: -1
-            val worker by produceState(initialValue = Worker(), key1 = workerId) {
-                value = ownerViewModel.getShopWorkerById(shopId, workerId)
+            val worker by remember {
+                mutableStateOf(ownerViewModel.getShopWorkerById(shopId, workerId))
             }
 
             WorkerAddUpdateScreen(

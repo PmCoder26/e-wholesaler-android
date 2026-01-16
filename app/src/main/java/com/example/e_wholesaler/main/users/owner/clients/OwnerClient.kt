@@ -21,6 +21,7 @@ import com.example.e_wholesaler.main.users.owner.dtos.SubProductAddResponse
 import com.example.e_wholesaler.main.users.owner.dtos.SubProductRemoveRequest
 import com.example.e_wholesaler.main.users.owner.dtos.SubProductUpdateRequest
 import com.example.e_wholesaler.main.users.owner.dtos.Worker
+import com.example.e_wholesaler.main.users.owner.dtos.WorkerDeleteRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
@@ -98,6 +99,11 @@ class OwnerClient(private val httpClient: HttpClient, private val context: Conte
     suspend fun updateShopWorker(ownerId: Long, worker: Worker): Worker? {
         return makeApiCall(ownerId, PUT, "/shops/worker", worker)
     }
+
+    suspend fun deleteShopWorker(ownerId: Long, requestDTO: WorkerDeleteRequest): Message? {
+        return makeApiCall(ownerId, DELETE, "/shops/worker", requestDTO)
+    }
+
 
     private suspend inline fun <reified ResponseType, reified RequestBodyType> makeApiCall(
         ownerId: Long, requestType: RequestType, url: String, requestBody: RequestBodyType?

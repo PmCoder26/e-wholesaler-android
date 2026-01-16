@@ -99,7 +99,6 @@ fun WorkersScreenPreview() {
     WorkersScreen(
         -1,
         shops = sampleShops,
-        workerTrigger = 0,
         onBackClicked = {},
         onAddClicked = {},
         onWorkerCardClick = { _ -> },
@@ -113,7 +112,6 @@ fun WorkersScreenPreview() {
 fun WorkersScreen(
     currentShopId: Long?,
     shops: Map<Long, String>,
-    workerTrigger: Int,
     onBackClicked: () -> Unit,
     onAddClicked: (shopId: Long) -> Unit,
     onWorkerCardClick: (workerId: Long) -> Unit,
@@ -128,7 +126,6 @@ fun WorkersScreen(
     val workers by produceState(
         initialValue = emptyList(),
         key1 = selectedShopId,
-        key2 = workerTrigger
     ) {
         value = selectedShopId?.let { getWorkersForShop(it) } ?: emptyList()
     }

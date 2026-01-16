@@ -20,6 +20,7 @@ import com.example.e_wholesaler.main.users.owner.dtos.SubProductAddRequest
 import com.example.e_wholesaler.main.users.owner.dtos.SubProductRemoveRequest
 import com.example.e_wholesaler.main.users.owner.dtos.SubProductUpdateRequest
 import com.example.e_wholesaler.main.users.owner.dtos.Worker
+import com.example.e_wholesaler.main.users.owner.dtos.WorkerDeleteRequest
 import com.example.e_wholesaler.main.users.owner.dtos.formatDateAndGet
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.Details
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.ProductSortType
@@ -119,9 +120,6 @@ open class OwnerViewModel(
     private var _currentShopIdForWorkers = MutableStateFlow(shopList.value.firstOrNull()?.id)
 
     val currentShopIdForWorkers = _currentShopIdForWorkers.asStateFlow()
-    private var _workerTrigger = MutableStateFlow(0)
-    val workerTrigger = _workerTrigger.asStateFlow()
-
 
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -394,27 +392,42 @@ open class OwnerViewModel(
 
     suspend fun addShopWorker(worker: Worker): Boolean =
         withContext(Dispatchers.IO) {
-            ifNotNull(ownerId.value, currentShopIdForWorkers.value) { ownerId, shopId ->
+            ifNotNull(ownerId.value, _currentShopIdForWorkers.value) { ownerId, shopId ->
                 val addedWorker =
                     ownerClient.addShopWorker(ownerId, worker) ?: return@ifNotNull false
                 val newWorkerList = shopIdVsWorkers[shopId]?.toMutableList() ?: mutableListOf()
                 newWorkerList.add(addedWorker)
                 shopIdVsWorkers[shopId] = newWorkerList
-                _workerTrigger.value += 1
                 return@ifNotNull true
             } ?: false
         }
 
     suspend fun updateShopWorker(worker: Worker): Boolean =
         withContext(Dispatchers.IO) {
-            ifNotNull(ownerId.value, currentShopIdForWorkers.value) { ownerId, shopId ->
+            ifNotNull(ownerId.value, _currentShopIdForWorkers.value) { ownerId, shopId ->
                 val updatedWorker =
                     ownerClient.updateShopWorker(ownerId, worker) ?: return@ifNotNull false
                 val oldWorkerList = shopIdVsWorkers[shopId] ?: mutableListOf()
                 val newWorkerList = oldWorkerList.filterNot { it.id == worker.id }.toMutableList()
                 newWorkerList.add(updatedWorker)
                 shopIdVsWorkers[shopId] = newWorkerList
-                _workerTrigger.value += 1
+                return@ifNotNull true
+            } ?: false
+        }
+
+    suspend fun deleteShopWorker(workerId: Long): Boolean =
+        withContext(Dispatchers.IO) {
+            ifNotNull(ownerId.value, _currentShopIdForWorkers.value) { ownerId, shopId ->
+                val oldWorkerList = shopIdVsWorkers[shopId] ?: mutableListOf()
+                val workerExists = oldWorkerList.find { it.id == workerId } != null
+                if (!workerExists) return@ifNotNull false
+
+                ownerClient.deleteShopWorker(ownerId, WorkerDeleteRequest(workerId, shopId))
+                    ?: return@ifNotNull false
+
+                val newWorkerList = oldWorkerList.filterNot { it.id == workerId }.toMutableList()
+                shopIdVsWorkers[shopId] = newWorkerList
+
                 return@ifNotNull true
             } ?: false
         }
