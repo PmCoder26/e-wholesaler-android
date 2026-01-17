@@ -65,13 +65,13 @@ import androidx.compose.ui.unit.sp
 import com.example.e_wholesaler.main.users.owner.dtos.Product
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
 import com.example.e_wholesaler.main.users.owner.dtos.SubProduct
-import com.example.e_wholesaler.main.users.owner.ui.BorderColor
-import com.example.e_wholesaler.main.users.owner.ui.CardBackgroundWhite
-import com.example.e_wholesaler.main.users.owner.ui.HintGray
-import com.example.e_wholesaler.main.users.owner.ui.IconColorWhite
-import com.example.e_wholesaler.main.users.owner.ui.TextPrimary
-import com.example.e_wholesaler.main.users.owner.ui.TextSecondary
-import com.example.e_wholesaler.main.users.owner.ui.TopBarBlue
+import com.example.e_wholesaler.main.users.owner.ui.shops.BorderColor
+import com.example.e_wholesaler.main.users.owner.ui.shops.CardBackgroundWhite
+import com.example.e_wholesaler.main.users.owner.ui.shops.HintGray
+import com.example.e_wholesaler.main.users.owner.ui.shops.IconColorWhite
+import com.example.e_wholesaler.main.users.owner.ui.shops.TextPrimary
+import com.example.e_wholesaler.main.users.owner.ui.shops.TextSecondary
+import com.example.e_wholesaler.main.users.owner.ui.shops.TopBarBlue
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.ProductSortType
 
 

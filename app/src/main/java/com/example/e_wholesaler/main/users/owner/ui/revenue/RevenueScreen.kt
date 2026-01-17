@@ -1,4 +1,4 @@
-package com.example.e_wholesaler.main.users.owner.ui
+package com.example.e_wholesaler.main.users.owner.ui.revenue
 
 import android.annotation.SuppressLint
 import android.os.Build

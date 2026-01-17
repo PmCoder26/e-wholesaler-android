@@ -1,8 +1,10 @@
 package com.example.ui
 
 import android.annotation.SuppressLint
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -51,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_wholesaler.auth.utils.Gender
 import com.example.e_wholesaler.dependency_injection.di.appModule
+import com.example.e_wholesaler.dependency_injection.di.ownerModule
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 import com.example.e_wholesaler.main.users.owner.ui.owner.getIsPreview
 import com.example.e_wholesaler.main.users.owner.ui.owner.getViewModelStoreOwner
@@ -60,7 +63,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
-import org.koin.core.context.loadKoinModules
 import org.koin.core.context.unloadKoinModules
 import org.koin.java.KoinJavaComponent.inject
 import org.parimal.auth.AuthClient
@@ -82,6 +84,7 @@ fun OwnerInfoScreenPreview() {
     )
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @SuppressLint("ContextCastToActivity")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,8 +138,8 @@ fun OwnerInfoScreen(owner: OwnerDetails?) {
                                 navigationViewModel.setIsLoggedIn(false)
                                 navigationViewModel.setHasNavigated(false)
 
-                                unloadKoinModules(appModule)
-                                loadKoinModules(appModule)
+                                unloadKoinModules(listOf(appModule, ownerModule))
+                                unloadKoinModules(listOf(appModule, ownerModule))
 
                                 val navController =
                                     navigationViewModel.getController("MainController")

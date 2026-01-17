@@ -1,4 +1,4 @@
-package com.example.e_wholesaler.main.users.owner.ui
+package com.example.e_wholesaler.main.users.owner.ui.shops
 
 import android.os.Build
 import androidx.annotation.RequiresApi

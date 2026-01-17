@@ -47,9 +47,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_wholesaler.main.users.owner.dtos.Product
 import com.example.e_wholesaler.main.users.owner.dtos.SubProduct
-import com.example.e_wholesaler.main.users.owner.ui.CardBackgroundWhite
-import com.example.e_wholesaler.main.users.owner.ui.IconColorWhite
-import com.example.e_wholesaler.main.users.owner.ui.TopBarBlue
+import com.example.e_wholesaler.main.users.owner.ui.shops.CardBackgroundWhite
+import com.example.e_wholesaler.main.users.owner.ui.shops.IconColorWhite
+import com.example.e_wholesaler.main.users.owner.ui.shops.TopBarBlue
 import java.util.UUID
 
 private data class SubProductFormState(
