@@ -2,6 +2,7 @@ package com.example.ui
 
 import android.annotation.SuppressLint
 import android.widget.Toast
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,6 +50,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_wholesaler.auth.utils.Gender
+import com.example.e_wholesaler.dependency_injection.di.appModule
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
 import com.example.e_wholesaler.main.users.owner.ui.owner.getIsPreview
 import com.example.e_wholesaler.main.users.owner.ui.owner.getViewModelStoreOwner
@@ -58,6 +60,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
+import org.koin.core.context.loadKoinModules
+import org.koin.core.context.unloadKoinModules
 import org.koin.java.KoinJavaComponent.inject
 import org.parimal.auth.AuthClient
 
@@ -120,6 +124,7 @@ fun OwnerInfoScreen(owner: OwnerDetails?) {
             ) {
                 val scope = rememberCoroutineScope()
                 val context = LocalContext.current
+                val activity = LocalActivity.current
 
                 Button(
                     onClick = {
@@ -127,13 +132,20 @@ fun OwnerInfoScreen(owner: OwnerDetails?) {
                             val authClient by inject<AuthClient>(AuthClient::class.java)
                             val loggedOut = authClient.logout()
                             if (loggedOut) {
-                                navigationViewModel.updateIsLoggedIn()
-                                navigationViewModel.updateHasNavigated()
+                                navigationViewModel.setIsLoggedIn(false)
+                                navigationViewModel.setHasNavigated(false)
+
+                                unloadKoinModules(appModule)
+                                loadKoinModules(appModule)
+
                                 val navController =
                                     navigationViewModel.getController("MainController")
+
+
                                 navController?.navigate("LoginScreen") {
                                     popUpTo(0) { inclusive = true }
                                 }
+                                activity?.recreate()
                             } else withContext(Dispatchers.Main) {
                                 Toast.makeText(
                                     context,

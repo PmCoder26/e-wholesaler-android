@@ -31,15 +31,15 @@ open class NavigationViewModel : ViewModel() {
 
     fun getController(controllerName: String) = navHostControllerMap[controllerName]
 
-    fun updateHasNavigated() {
+    fun setHasNavigated(value: Boolean) {
         viewModelScope.launch(Dispatchers.Main) {
-            hasNavigatedFromLogin.value = !hasNavigatedFromLogin.value
+            hasNavigatedFromLogin.value = value
         }
     }
 
-    fun updateIsLoggedIn() {
+    fun setIsLoggedIn(value: Boolean) {
         viewModelScope.launch(Dispatchers.Main) {
-            isLoggedIn.value = !isLoggedIn.value
+            isLoggedIn.value = value
         }
     }
 

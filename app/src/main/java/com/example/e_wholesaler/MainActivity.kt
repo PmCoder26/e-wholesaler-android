@@ -3,6 +3,7 @@ package com.example.e_wholesaler
 import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -28,7 +29,6 @@ import org.parimal.auth.dtos.TokenState
 
 class MainActivity : ComponentActivity() {
 
-
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("RestrictedApi")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(tokenState, hasNavigated) {
                 if (!hasNavigated && tokensAndCredentialsCheck(tokenState)) {
-                    navigationViewModel.updateIsLoggedIn()
+                    navigationViewModel.setIsLoggedIn(true)
                 }
             }
 
@@ -59,13 +59,19 @@ class MainActivity : ComponentActivity() {
             NavHost(navController = navCon, startDestination = "LoginScreen") {
                 composable("LoginScreen") {
                     if (isLoggedIn && !hasNavigated) {
-                        navigationViewModel.updateHasNavigated()
+                        navigationViewModel.setHasNavigated(true)
                         when (tokenState.userType) {
                             UserType.OWNER -> navCon.navigate("OwnerScreen")
-                            UserType.WORKER -> TODO()
-                            UserType.CUSTOMER -> TODO()
-                            UserType.NONE -> TODO()
-                            null -> TODO()
+                            UserType.WORKER -> {}
+                            UserType.CUSTOMER -> {}
+                            UserType.NONE -> {}
+                            null -> {
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    "Internal error",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         }
                     } else if (!isLoggedIn) {
                         LoginScreen(navCon, authClient)
@@ -81,6 +87,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        viewModelStore.clear()
+        super.onDestroy()
     }
 
     @Composable

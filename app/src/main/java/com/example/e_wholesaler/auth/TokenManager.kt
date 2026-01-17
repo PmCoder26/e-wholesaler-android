@@ -62,12 +62,11 @@ class TokenManager(private var dataStore: DataStore<Preferences>) : ViewModel() 
                 }
 
                 _state.update {
-                    println("Tokens updated")
                     it.copy(
-                        accessToken.value,
-                        refreshToken.value,
-                        userType.value,
-                        userTypeId.value
+                        accessToken = accessToken.value,
+                        refreshToken = refreshToken.value,
+                        userType = userType.value,
+                        userTypeId = userTypeId.value
                     )
                 }
             }
