@@ -86,7 +86,6 @@ class TokenManager(private var dataStore: DataStore<Preferences>) : ViewModel() 
         dataStore.edit { pref ->
             pref[ACCESS_TOKEN_KEY] = accessToken
             pref[REFRESH_TOKEN_KEY] = refreshToken
-            println("Tokens refreshed")
         }
     }
 

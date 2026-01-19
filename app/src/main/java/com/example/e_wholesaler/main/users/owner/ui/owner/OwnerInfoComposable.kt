@@ -63,11 +63,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
+import org.koin.core.context.loadKoinModules
 import org.koin.core.context.unloadKoinModules
 import org.koin.java.KoinJavaComponent.inject
 import org.parimal.auth.AuthClient
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Preview(showBackground = true)
 @Composable
 fun OwnerInfoScreenPreview() {
@@ -139,11 +141,10 @@ fun OwnerInfoScreen(owner: OwnerDetails?) {
                                 navigationViewModel.setHasNavigated(false)
 
                                 unloadKoinModules(listOf(appModule, ownerModule))
-                                unloadKoinModules(listOf(appModule, ownerModule))
+                                loadKoinModules(listOf(appModule, ownerModule))
 
                                 val navController =
                                     navigationViewModel.getController("MainController")
-
 
                                 navController?.navigate("LoginScreen") {
                                     popUpTo(0) { inclusive = true }

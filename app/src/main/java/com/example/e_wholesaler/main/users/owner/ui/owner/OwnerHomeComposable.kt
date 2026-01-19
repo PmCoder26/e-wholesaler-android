@@ -69,6 +69,7 @@ import androidx.navigation.navArgument
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.Product
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
+import com.example.e_wholesaler.main.users.owner.dtos.Worker
 import com.example.e_wholesaler.main.users.owner.dtos.hasDifferentData
 import com.example.e_wholesaler.main.users.owner.dtos.hasNoBlankField
 import com.example.e_wholesaler.main.users.owner.ui.products.AddProductScreen
@@ -324,35 +325,37 @@ fun OwnerScreen() {
                 currentShopId = currentShopIdForWorkers,
                 shops = shopIdVsName,
                 onBackClicked = { navCon.popBackStack() },
-                onAddClicked = { navCon.navigate("WorkerAddUpdateScreen") },
-                onWorkerCardClick = { workerId -> navCon.navigate("WorkerDetailsScreen/$workerId") },
+                onAddClicked = { navCon.navigate("WorkerAddUpdateScreen_add") },
+                onWorkerCardClick = { workerId ->
+                    scope.launch {
+                        ownerViewModel.updateSelectedWorker(workerId)
+                        navCon.navigate("WorkerDetailsScreen")
+                    }
+                },
                 getWorkersForShop = { shopId -> ownerViewModel.getShopWorkers(shopId) },
                 onCurrentShopIdForWorkersChange = { ownerViewModel.setCurrentShopIdForWorkers(it) }
             )
         }
 
-        composable(
-            route = "WorkerDetailsScreen/{workerId}",
-            arguments = listOf(
-                navArgument("workerId", { type = NavType.LongType })
-            )
-        ) {
-            val shopId = ownerViewModel.currentShopIdForWorkers.collectAsState().value ?: -1
-            val workerId = it.arguments?.getLong("workerId") ?: -1
-            val worker by remember {
-                mutableStateOf(ownerViewModel.getShopWorkerById(shopId, workerId))
-            }
+        composable(route = "WorkerDetailsScreen") {
+            val worker by ownerViewModel.selectedShopWorker.collectAsState()
 
             WorkerDetailsScreen(
-                worker = worker,
-                onBackClicked = { navCon.popBackStack() },
-                onEditClicked = { navCon.navigate("WorkerAddUpdateScreen/${it.id}") },
+                worker = worker ?: Worker(),
+                onBackClicked = {
+                    scope.launch {
+                        ownerViewModel.updateSelectedWorker(null)
+                        navCon.popBackStack()
+                    }
+                },
+                onEditClicked = { navCon.navigate("WorkerAddUpdateScreen_update") },
                 onDeleteClicked = {
                     scope.launch {
-                        val hasWorkerDeleted = ownerViewModel.deleteShopWorker(workerId)
+                        val hasWorkerDeleted = ownerViewModel.deleteShopWorker(worker?.id ?: -1)
                         val message =
                             if (hasWorkerDeleted) "Worker deleted successfully" else "Unable to delete the worker or no such worker exists"
                         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        ownerViewModel.updateSelectedWorker(null)
                         navCon.popBackStack()
                     }
                 }
@@ -360,7 +363,7 @@ fun OwnerScreen() {
         }
 
         // Composable to add a new worker.
-        composable(route = "WorkerAddUpdateScreen") {
+        composable(route = "WorkerAddUpdateScreen_add") {
             val shopId = ownerViewModel.currentShopIdForWorkers.collectAsState().value ?: -1
 
             WorkerAddUpdateScreen(
@@ -380,17 +383,9 @@ fun OwnerScreen() {
         }
 
         // Composable to update worker details.
-        composable(
-            route = "WorkerAddUpdateScreen/{workerId}",
-            arguments = listOf(
-                navArgument("workerId", { type = NavType.LongType })
-            )
-        ) {
+        composable(route = "WorkerAddUpdateScreen_update") {
             val shopId = ownerViewModel.currentShopIdForWorkers.collectAsState().value ?: -1
-            val workerId = it.arguments?.getLong("workerId") ?: -1
-            val worker by remember {
-                mutableStateOf(ownerViewModel.getShopWorkerById(shopId, workerId))
-            }
+            val worker by ownerViewModel.selectedShopWorker.collectAsState()
 
             WorkerAddUpdateScreen(
                 worker = worker,

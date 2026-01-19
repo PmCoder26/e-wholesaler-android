@@ -120,6 +120,8 @@ open class OwnerViewModel(
     private var _currentShopIdForWorkers = MutableStateFlow(shopList.value.firstOrNull()?.id)
 
     val currentShopIdForWorkers = _currentShopIdForWorkers.asStateFlow()
+    private var _selectedShopWorker = MutableStateFlow<Worker?>(null)
+    val selectedShopWorker = _selectedShopWorker.asStateFlow()
 
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -332,8 +334,8 @@ open class OwnerViewModel(
                 )
 
                 // using the same api for adding products and sub-products
-                val response = ownerClient.addShopSubProduct(ownerId, requestDTO)
-                if (response == null) return@withContext false
+                val response =
+                    ownerClient.addShopSubProduct(ownerId, requestDTO) ?: return@withContext false
 
                 val updatedSubProducts = product.shopSubProducts.mapNotNull { sub ->
                     val createdSubProduct =
@@ -383,8 +385,11 @@ open class OwnerViewModel(
             }
         }
 
-    fun getShopWorkerById(shopId: Long, workerId: Long): Worker =
-        shopIdVsWorkers[shopId]?.find { it.id == workerId } ?: Worker()
+    suspend fun updateSelectedWorker(workerId: Long?) =
+        withContext(viewModelScope.coroutineContext) {
+            _selectedShopWorker.value =
+                if (workerId != null) shopIdVsWorkers[_currentShopIdForWorkers.value]?.find { it.id == workerId } else null
+        }
 
     fun setCurrentShopIdForWorkers(shopId: Long) {
         viewModelScope.launch { _currentShopIdForWorkers.value = shopId }
@@ -419,7 +424,7 @@ open class OwnerViewModel(
         withContext(Dispatchers.IO) {
             ifNotNull(ownerId.value, _currentShopIdForWorkers.value) { ownerId, shopId ->
                 val oldWorkerList = shopIdVsWorkers[shopId] ?: mutableListOf()
-                val workerExists = oldWorkerList.find { it.id == workerId } != null
+                val workerExists = _selectedShopWorker.value != null
                 if (!workerExists) return@ifNotNull false
 
                 ownerClient.deleteShopWorker(ownerId, WorkerDeleteRequest(workerId, shopId))
