@@ -208,6 +208,7 @@ fun OwnerScreen() {
                             val message =
                                 if (hasAddedNewShop) "New shop added successfully" else "Unable to add the new shop"
                             showToast(context, message)
+                            if (hasAddedNewShop) navCon.popBackStack()
                         } else {
                             showToast(context, "Please fill all the shop details")
                         }
