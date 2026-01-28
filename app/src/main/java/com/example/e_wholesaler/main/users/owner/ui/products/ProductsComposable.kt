@@ -1,15 +1,6 @@
 package com.example.e_wholesaler.main.users.owner.ui.products
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,12 +8,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -58,13 +47,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.e_wholesaler.main.users.owner.dtos.Product
+import com.example.e_wholesaler.main.users.owner.dtos.ProductIdentity
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
-import com.example.e_wholesaler.main.users.owner.dtos.SubProduct
 import com.example.e_wholesaler.main.users.owner.ui.shops.BorderColor
 import com.example.e_wholesaler.main.users.owner.ui.shops.CardBackgroundWhite
 import com.example.e_wholesaler.main.users.owner.ui.shops.HintGray
@@ -72,65 +59,23 @@ import com.example.e_wholesaler.main.users.owner.ui.shops.IconColorWhite
 import com.example.e_wholesaler.main.users.owner.ui.shops.TextPrimary
 import com.example.e_wholesaler.main.users.owner.ui.shops.TextSecondary
 import com.example.e_wholesaler.main.users.owner.ui.shops.TopBarBlue
+import com.example.e_wholesaler.main.users.owner.ui.workers.BackgroundScreen
 import com.example.e_wholesaler.main.users.owner.viewmodels.utils.ProductSortType
-
-
-val BackgroundScreen = Color(0xFFF0F4F8)
-val TableHeaderBackground = Color(0xFFE3F2FD)
-val TableHeaderText = Color(0xFF0D47A1)
-val PriceColor = TopBarBlue
-val StockGreen = Color(0xFF4CAF50)
-val StockRed = Color(0xFFF44336)
-val DeleteRed = Color(0xFFE53935)
-
 
 @Preview(showBackground = true)
 @Composable
 fun ShopProductsScreenPreview() {
     val sampleShops = listOf(
-        Shop(
-            id = 1,
-            name = "Sagar Traders",
-            gstNo = "GST1",
-            address = "Addr1",
-            city = "City1",
-            state = "State1",
-            createdAt = ""
-        ),
+        Shop(id = 1, name = "Sagar Traders")
     )
-    val sampleProductsData = listOf(
-        Product(
-            name = "Lux Soap",
-            category = "Soap",
-            company = "Unilever",
-            shopSubProducts = mutableListOf(
-                SubProduct(id = 101, mrp = 5.0 * 1, sellingPrice = 5.0, quantity = 1, stock = 500),
-                SubProduct(
-                    id = 102,
-                    mrp = 10.0 * 1,
-                    sellingPrice = 10.0,
-                    quantity = 1,
-                    stock = 300
-                ),
-                SubProduct(id = 103, mrp = 35.0, sellingPrice = 32.0, quantity = 1, stock = 100),
-                SubProduct(id = 104, mrp = 50.0, sellingPrice = 45.0, quantity = 5, stock = 50)
-            )
-        ),
-        Product(
-            name = "Parle-G Biscuits",
-            category = "Biscuit",
-            company = "Parle",
-            shopSubProducts = mutableListOf(
-                SubProduct(id = 201, mrp = 5.0, sellingPrice = 5.0, quantity = 1, stock = 1000),
-                SubProduct(id = 202, mrp = 10.0, sellingPrice = 9.0, quantity = 1, stock = 200),
-                SubProduct(id = 203, mrp = 60.0, sellingPrice = 54.0, quantity = 12, stock = 100)
-            )
-        )
+    val sampleProducts = listOf(
+        ProductIdentity(productId = 1, productName = "Lux Soap", companyName = "Unilever"),
+        ProductIdentity(productId = 2, productName = "Parle-G", companyName = "Parle")
     )
     ShopProductsScreen(
         shops = sampleShops,
         initialSelectedShop = sampleShops.first(),
-        products = sampleProductsData,
+        products = sampleProducts,
         onBackClicked = {},
         onShopSelected = {},
         onAddProductClicked = {},
@@ -144,18 +89,17 @@ fun ShopProductsScreenPreview() {
 fun ShopProductsScreen(
     shops: List<Shop>,
     initialSelectedShop: Shop?,
-    products: List<Product>,
+    products: List<ProductIdentity>,
     onBackClicked: () -> Unit,
     onShopSelected: (Shop) -> Unit,
     onAddProductClicked: () -> Unit,
     onFilterChange: (ProductSortType) -> Unit,
-    onInfoButtonClick: (Product) -> Unit
+    onInfoButtonClick: (ProductIdentity) -> Unit
 ) {
     var selectedShop by remember { mutableStateOf(initialSelectedShop) }
     var searchQuery by remember { mutableStateOf("") }
     var activeFilter by remember { mutableStateOf(ProductSortType.NAME) }
     var shopDropdownExpanded by remember { mutableStateOf(false) }
-    var expandedProductKey by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -266,9 +210,6 @@ fun ShopProductsScreen(
                 FilterButton("Name", activeFilter.name) {
                     activeFilter = ProductSortType.NAME; onFilterChange(activeFilter)
                 }
-                FilterButton("Category", activeFilter.name) {
-                    activeFilter = ProductSortType.CATEGORY; onFilterChange(activeFilter)
-                }
                 FilterButton("Company", activeFilter.name) {
                     activeFilter = ProductSortType.COMPANY; onFilterChange(activeFilter)
                 }
@@ -286,15 +227,10 @@ fun ShopProductsScreen(
                     ProductTableHeader()
                     LazyColumn(modifier = Modifier.weight(1f)) {
                         items(
-                            products.filter { it.name.contains(searchQuery, true) },
-                            key = { it.name }) { product ->
+                            products.filter { it.productName.contains(searchQuery, true) },
+                            key = { it.productId }) { product ->
                             ProductCardItem(
                                 product = product,
-                                isExpanded = product.name == expandedProductKey,
-                                onToggleExpand = {
-                                    expandedProductKey =
-                                        if (product.name == expandedProductKey) null else product.name
-                                },
                                 onInfoButtonClick = { onInfoButtonClick(product) }
                             )
                             HorizontalDivider(
@@ -311,7 +247,7 @@ fun ShopProductsScreen(
 
 @Composable
 fun FilterButton(text: String, activeFilter: String, onClick: () -> Unit) {
-    val isActive = text.lowercase() == activeFilter.lowercase()
+    val isActive = text.equals(activeFilter, ignoreCase = true)
     Button(
         onClick = onClick,
         shape = RoundedCornerShape(8.dp),
@@ -330,167 +266,59 @@ fun ProductTableHeader() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TableHeaderBackground)
+            .background(Color(0xFFE3F2FD))
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             "Product Name",
-            modifier = Modifier.weight(1.9f),
+            modifier = Modifier.weight(2f),
             fontWeight = FontWeight.SemiBold,
-            color = TableHeaderText,
-            fontSize = 17.sp
-        )
-        Text(
-            "Category",
-            modifier = Modifier.weight(1.5f),
-            fontWeight = FontWeight.SemiBold,
-            color = TableHeaderText,
+            color = Color(0xFF0D47A1),
             fontSize = 17.sp
         )
         Text(
             "Company",
             modifier = Modifier.weight(1.5f),
             fontWeight = FontWeight.SemiBold,
-            color = TableHeaderText,
+            color = Color(0xFF0D47A1),
             fontSize = 17.sp
         )
-        Spacer(modifier = Modifier.width(24.dp))
+        Spacer(modifier = Modifier.width(48.dp))
     }
     HorizontalDivider(thickness = DividerDefaults.Thickness, color = BorderColor)
 }
 
 @Composable
 fun ProductCardItem(
-    product: Product,
-    isExpanded: Boolean,
-    onToggleExpand: () -> Unit,
+    product: ProductIdentity,
     onInfoButtonClick: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 7.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(onClick = onToggleExpand),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    product.name,
-                    modifier = Modifier.weight(2.5f),
-                    color = TextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    product.category,
-                    modifier = Modifier.weight(1.5f),
-                    color = TextSecondary,
-                    fontSize = 16.sp
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    product.company,
-                    modifier = Modifier.weight(1.5f),
-                    color = TextSecondary,
-                    fontSize = 16.sp
-                )
-            }
-            IconButton(onClick = onInfoButtonClick) {
-                Icon(
-                    imageVector = Icons.Outlined.Info,
-                    contentDescription = "Product Info",
-                    tint = TextSecondary
-                )
-            }
-        }
-        AnimatedVisibility(
-            visible = isExpanded,
-            enter = slideInVertically(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    Spring.StiffnessLow
-                ),
-                initialOffsetY = { -it / 2 }) + fadeIn(animationSpec = tween(durationMillis = 200)),
-            exit = slideOutVertically(
-                animationSpec = tween(durationMillis = 200),
-                targetOffsetY = { -it / 2 }) + fadeOut(animationSpec = tween(durationMillis = 200))
-        ) {
-            ExpandedSubProductsView(subProducts = product.shopSubProducts)
-        }
-    }
-}
-
-@Composable
-fun ExpandedSubProductsView(subProducts: List<SubProduct>) {
-    if (subProducts.isNotEmpty()) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 300.dp)
-                .background(CardBackgroundWhite.copy(alpha = 0.95f))
-                .padding(start = 24.dp, end = 16.dp, top = 8.dp, bottom = 12.dp)
-        ) {
-            itemsIndexed(
-                subProducts,
-                key = { _, subProduct -> subProduct.id }) { index, subProduct ->
-                Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "MRP/Pc: ₹${subProduct.mrp}",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = PriceColor,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            "Selling: ₹${subProduct.sellingPrice}",
-                            fontSize = 16.sp,
-                            textAlign = TextAlign.Center,
-                            color = TextSecondary,
-                            modifier = Modifier.weight(1.5f)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Quantity: ${subProduct.quantity}",
-                            fontSize = 15.sp,
-                            color = TextPrimary,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Start
-                        )
-                    }
-                }
-                if (index < subProducts.size - 1) {
-                    HorizontalDivider(
-                        thickness = 0.5.dp,
-                        color = BorderColor.copy(alpha = 0.3f),
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            }
-        }
-    } else {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
-            "No specific pack details available.",
-            fontSize = 13.sp,
-            color = TextSecondary,
-            modifier = Modifier.padding(vertical = 8.dp)
+            product.productName,
+            modifier = Modifier.weight(2f),
+            color = TextPrimary,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium
         )
+        Text(
+            product.companyName,
+            modifier = Modifier.weight(1.5f),
+            color = TextSecondary,
+            fontSize = 16.sp
+        )
+        IconButton(onClick = onInfoButtonClick) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = "Product Info",
+                tint = TopBarBlue
+            )
+        }
     }
 }

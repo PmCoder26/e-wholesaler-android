@@ -10,8 +10,3 @@ data class SubProduct(
     val quantity: Int,
     val stock: Long,
 )
-
-
-fun List<SubProduct>.existsByMrp(mrp: Double): Boolean {
-    return this.find { it.mrp == mrp } != null
-}

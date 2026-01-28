@@ -8,17 +8,16 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.e_wholesaler.main.users.owner.clients.OwnerClient
+import com.example.e_wholesaler.main.users.owner.dtos.AddProductForShopRequest
+import com.example.e_wholesaler.main.users.owner.dtos.AddSubProductsForShopRequest
 import com.example.e_wholesaler.main.users.owner.dtos.DailyShopRevenue
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
-import com.example.e_wholesaler.main.users.owner.dtos.Product
-import com.example.e_wholesaler.main.users.owner.dtos.ProductRemoveRequest
-import com.example.e_wholesaler.main.users.owner.dtos.QuantityToSellingPrice
+import com.example.e_wholesaler.main.users.owner.dtos.Product2
+import com.example.e_wholesaler.main.users.owner.dtos.ProductIdentity
+import com.example.e_wholesaler.main.users.owner.dtos.SellingUnitRequest
+import com.example.e_wholesaler.main.users.owner.dtos.SellingUnitUpdate
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
-import com.example.e_wholesaler.main.users.owner.dtos.SubProduct
-import com.example.e_wholesaler.main.users.owner.dtos.SubProductAddRequest
-import com.example.e_wholesaler.main.users.owner.dtos.SubProductRemoveRequest
-import com.example.e_wholesaler.main.users.owner.dtos.SubProductUpdateRequest
 import com.example.e_wholesaler.main.users.owner.dtos.Worker
 import com.example.e_wholesaler.main.users.owner.dtos.WorkerDeleteRequest
 import com.example.e_wholesaler.main.users.owner.dtos.formatDateAndGet
@@ -45,19 +44,15 @@ open class OwnerViewModel(
 ) : ViewModel() {
 
     private val OWNER_ID_KEY = longPreferencesKey("user_type_id")
-
     private var ownerId = MutableStateFlow<Long?>(null)
-
 
     init {
         viewModelScope.launch {
-            // .first() gives the current snapshot of preferences instead of continuous updates.
             val pref = dataStore.data.first()
             ownerId.value = pref[OWNER_ID_KEY]
             refreshHomeScreen()
         }
     }
-
 
     private var ownerDetails = MutableStateFlow<OwnerDetails?>(null)
     private var homeDetails = MutableStateFlow<HomeScreenDetails?>(null)
@@ -67,9 +62,7 @@ open class OwnerViewModel(
 
     private var shopRevenueSortType = MutableStateFlow(ShopSortType.REVENUE)
     private var revenueDetails = MutableStateFlow(
-        TotalShopRevenue(
-            emptyList(), 0.0, ShopSortType.REVENUE
-        )
+        TotalShopRevenue(emptyList(), 0.0, ShopSortType.REVENUE)
     )
     val totalRevenue = combine(revenueDetails, shopRevenueSortType) { revenueDetails, sortType ->
         val sortedList = when (sortType) {
@@ -95,34 +88,43 @@ open class OwnerViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), ShopsState())
 
     private var productSortType = MutableStateFlow(ProductSortType.NAME)
-    private var shopIdVsProducts = mutableMapOf<Long, MutableList<Product>>()
-    private var currentShopIdForProducts = MutableStateFlow(shopList.value.firstOrNull()?.id)
+    private var shopIdVsProducts = mutableMapOf<Long, MutableList<ProductIdentity>>()
+    private var currentShopIdForProducts = MutableStateFlow<Long?>(null)
     private var shopProductsUpdateTrigger = MutableStateFlow(0)
+
     val shopProductsState = combine(
         currentShopIdForProducts,
         productSortType,
-        shopProductsUpdateTrigger
-    ) { currentId, sortType, _ ->
+        shopProductsUpdateTrigger,
+        shopList
+    ) { currentId, sortType, _, shops ->
         if (currentId != null) {
             val list = shopIdVsProducts[currentId] ?: emptyList()
             val sortedList = when (sortType) {
-                ProductSortType.NAME -> list.sortedBy { it.name }
-                ProductSortType.CATEGORY -> list.sortedBy { it.category }
-                ProductSortType.COMPANY -> list.sortedBy { it.company }
+                ProductSortType.NAME -> list.sortedBy { it.productName }
+                ProductSortType.COMPANY -> list.sortedBy { it.companyName }
             }
-            ShopProductsState(currentId, sortedList, sortType)
+            ShopProductsState(
+                shopId = currentId,
+                currentShop = shops.find { it.id == currentId } ?: Shop(),
+                products = sortedList,
+                sortType = sortType
+            )
         } else {
             ShopProductsState()
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), ShopProductsState())
 
-    private var shopIdVsWorkers = mutableMapOf<Long, MutableList<Worker>>()
-    private var _currentShopIdForWorkers = MutableStateFlow(shopList.value.firstOrNull()?.id)
+    private var productIdVsProduct = mutableMapOf<Long, Product2>()
+    private var _selectedProduct = MutableStateFlow<Product2?>(null)
+    val selectedProduct = _selectedProduct.asStateFlow()
 
+    private var shopIdVsWorkers = mutableMapOf<Long, MutableList<Worker>>()
+    private var _currentShopIdForWorkers = MutableStateFlow<Long?>(null)
     val currentShopIdForWorkers = _currentShopIdForWorkers.asStateFlow()
+
     private var _selectedShopWorker = MutableStateFlow<Worker?>(null)
     val selectedShopWorker = _selectedShopWorker.asStateFlow()
-
 
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun refreshHomeScreen() {
@@ -171,7 +173,12 @@ open class OwnerViewModel(
         ownerId.value?.let {
             val shopListResponse = ownerClient.getOwnerShops(it)
                 ?.map { it.formatDateAndGet() }
-            shopListResponse?.let { shopList.value = it }
+            shopListResponse?.let {
+                shopList.value = it
+                if (currentShopIdForProducts.value == null) {
+                    currentShopIdForProducts.value = it.firstOrNull()?.id
+                }
+            }
         }
     }
 
@@ -209,8 +216,7 @@ open class OwnerViewModel(
             ownerId.value?.let { ownerId ->
                 val addedShop = ownerClient.addNewShop(ownerId, newShop)
                 addedShop?.let { addedShop ->
-                    val newShopList = shopList.value
-                        .toMutableList()
+                    val newShopList = shopList.value.toMutableList()
                     newShopList.add(addedShop.formatDateAndGet())
                     shopList.value = newShopList
                     return@withContext true
@@ -220,14 +226,16 @@ open class OwnerViewModel(
         }
     }
 
-    fun getShopProducts(shop: Shop) {
-        viewModelScope.launch(Dispatchers.IO) {
+    suspend fun getShopProducts(shop: Shop) {
+        withContext(Dispatchers.IO) {
             ownerId.value?.let { ownerId ->
                 if (!shopIdVsProducts.containsKey(shop.id)) {
-                    val productsResponse = ownerClient.getShopProducts(ownerId, shop.id)
+                    val productsResponse =
+                        ownerClient.getShopProducts(ownerId, shop.id)?.toMutableList()
                     productsResponse?.let { response -> shopIdVsProducts.put(shop.id, response) }
                 }
                 currentShopIdForProducts.value = shop.id
+                shopProductsUpdateTrigger.value++
             }
         }
     }
@@ -236,211 +244,274 @@ open class OwnerViewModel(
         viewModelScope.launch(Dispatchers.Main) { productSortType.value = sortType }
     }
 
-    fun getProductByName(productName: String): Product {
-        return shopIdVsProducts[currentShopIdForProducts.value]?.find { it.name == productName }
-            ?: Product()
-    }
-
-    suspend fun removeShopSubProduct(productName: String, subProduct: SubProduct): Boolean =
+    suspend fun addProduct(shopId: Long, request: AddProductForShopRequest): Boolean =
         withContext(Dispatchers.IO) {
-            ifNotNull(ownerId.value, currentShopIdForProducts.value) { ownerId, shopId ->
-                val requestDTO = SubProductRemoveRequest(subProduct.id, shopId)
-                val response = ownerClient.removeShopSubProduct(ownerId, requestDTO)
-                val hasProductRemoved = response?.message == "Shop sub-product removed successfully"
-
-                if (hasProductRemoved) {
-                    // 1. Get the current list of products for the shop.
-                    val currentProductsForShop = shopIdVsProducts[shopId] ?: return@ifNotNull false
-                    // 2. Find the index of the specific product we need to update.
-                    val productIndex =
-                        currentProductsForShop.indexOfFirst { it.name == productName }
-                    if (productIndex == -1) return@ifNotNull false
-                    val productToUpdate = currentProductsForShop[productIndex]
-                    // 3. Create a NEW list of sub-products with the item removed.
-                    val newSubProductsList =
-                        productToUpdate.shopSubProducts.filterNot { it.id == subProduct.id }
-                    productToUpdate.shopSubProducts = newSubProductsList
-                }
-
-                return@ifNotNull hasProductRemoved
-            } ?: return@withContext false
-        }
-
-    suspend fun addShopSubProduct(productName: String, subProduct: SubProduct): Boolean =
-        withContext(Dispatchers.IO) {
-            ifNotNull(ownerId.value, currentShopIdForProducts.value) { ownerId, shopId ->
-                val mrpToSellingMap = mapOf(
-                    subProduct.mrp to QuantityToSellingPrice(
-                        subProduct.quantity, subProduct.sellingPrice,
-                        subProduct.stock
-                    )
-                )
-                val productToUpdate = getProductByName(productName)
-                val requestDTO = SubProductAddRequest(
-                    productToUpdate.name, productToUpdate.category,
-                    productToUpdate.company, mrpToSellingMap, shopId
-                )
-
-                val response = ownerClient.addShopSubProduct(ownerId, requestDTO)
-                val hasAddedSubProduct = response?.idToPriceMap.isNullOrEmpty().not()
-
-                if (hasAddedSubProduct) {
-                    val subProductId = response.idToPriceMap.keys.toList()[0]
-                    val newSubProduct = subProduct.copy(id = subProductId)
-                    val newSubProductList = productToUpdate.shopSubProducts.toList() + newSubProduct
-                    productToUpdate.shopSubProducts = newSubProductList
-                }
-
-                return@ifNotNull hasAddedSubProduct
-            } ?: return@withContext false
-        }
-
-    suspend fun updateShopSubProduct(productName: String, subProduct: SubProduct): Boolean =
-        withContext(Dispatchers.IO) {
-            ifNotNull(ownerId.value, currentShopIdForProducts.value) { ownerId, shopId ->
-                val requestDTO = SubProductUpdateRequest(
-                    subProduct.id, subProduct.mrp, subProduct.sellingPrice,
-                    subProduct.quantity, subProduct.stock, shopId
-                )
-
-                val response = ownerClient.updateShopSubProduct(ownerId, requestDTO)
-                val hasUpdatedSubProduct =
-                    response?.message == "Shop's sub-product updated successfully"
-
-                if (hasUpdatedSubProduct) {
-                    val productToUpdate = getProductByName(productName)
-                    val newSubProductList = productToUpdate.shopSubProducts.map {
-                        if (it.id == subProduct.id) subProduct.copy() else it
-                    }
-                    productToUpdate.shopSubProducts = newSubProductList
-                }
-
-                return@ifNotNull hasUpdatedSubProduct
-            } ?: return@withContext false
-        }
-
-    suspend fun addProduct(product: Product): Boolean =
-        withContext(Dispatchers.IO) {
-            ifNotNull(ownerId.value, currentShopIdForProducts.value) { ownerId, shopId ->
-                val productExists =
-                    shopIdVsProducts[shopId]?.any { it.name == product.name } == true
-                if (productExists) return@withContext false
-                val mrpToSellingMap = product.shopSubProducts.associate { sb ->
-                    sb.mrp to QuantityToSellingPrice(sb.quantity, sb.sellingPrice, sb.stock)
-                }
-                val requestDTO = SubProductAddRequest(
-                    product.name, product.category,
-                    product.company, mrpToSellingMap, shopId
-                )
-
-                // using the same api for adding products and sub-products
-                val response =
-                    ownerClient.addShopSubProduct(ownerId, requestDTO) ?: return@withContext false
-
-                val updatedSubProducts = product.shopSubProducts.mapNotNull { sub ->
-                    val createdSubProduct =
-                        response.idToPriceMap.entries.find { it.value == sub.sellingPrice }
-                            ?: return@mapNotNull null
-                    sub.copy(id = createdSubProduct.key, sellingPrice = createdSubProduct.value)
-                }
-                val newProduct = product.copy(shopSubProducts = updatedSubProducts)
-                shopIdVsProducts[shopId] =
-                    ((shopIdVsProducts[shopId] ?: emptyList()) + newProduct) as MutableList
-                shopProductsUpdateTrigger.value++
-
-                true
-            } ?: false
-        }
-
-    suspend fun removeProduct(product: Product): Boolean =
-        withContext(Dispatchers.IO) {
-            ifNotNull(ownerId.value, currentShopIdForProducts.value) { ownerId, shopId ->
-                val productExists =
-                    shopIdVsProducts[shopId]?.any { it.name == product.name } == true
-                if (!productExists) return@withContext false
-
-                val requestDTO = ProductRemoveRequest(shopId, product.name)
-                val response = ownerClient.removeProduct(ownerId, requestDTO)
-
-                if (response != null && response.message.contains("Product deleted successfully")) {
-                    shopIdVsProducts[shopId]?.remove(product)
+            ownerId.value?.let { ownerId ->
+                val response = ownerClient.addProduct(ownerId, shopId, request)
+                if (response != null) {
+                    val product = response.product
+                    val productId = product.id ?: -1L
+                    val currentProducts = shopIdVsProducts[shopId] ?: mutableListOf()
+                    currentProducts.add(ProductIdentity(productId, product.name, product.company))
+                    shopIdVsProducts[shopId] = currentProducts
+                    if (productId != -1L) productIdVsProduct[productId] = product
                     shopProductsUpdateTrigger.value++
                     return@withContext true
                 }
+            }
+            return@withContext false
+        }
 
-                false
+    suspend fun deleteProduct(productId: Long): Boolean =
+        withContext(Dispatchers.IO) {
+            val shopId = currentShopIdForProducts.value ?: return@withContext false
+            ownerId.value?.let { ownerId ->
+                val success = ownerClient.deleteProduct(ownerId, shopId, productId)
+                if (success) {
+                    shopIdVsProducts[shopId]?.removeIf { it.productId == productId }
+                    productIdVsProduct.remove(productId)
+                    if (_selectedProduct.value?.id == productId) _selectedProduct.value = null
+                    shopProductsUpdateTrigger.value++
+                }
+                return@withContext success
             } ?: false
         }
 
-    suspend fun getShopWorkers(shopId: Long): List<Worker> =
+    suspend fun getShopProductDetails(shopId: Long, productIdentity: ProductIdentity) =
         withContext(Dispatchers.IO) {
-            val ownerId = ownerId.value ?: return@withContext emptyList()
-
-            return@withContext shopIdVsWorkers[shopId] ?: run {
-                val response =
-                    ownerClient.getShopWorkers(ownerId, shopId) ?: return@withContext emptyList()
-                shopIdVsWorkers[response.shopId] = response.workerList.toMutableList()
-
-                response.workerList
+            ownerId.value?.let { ownerId ->
+                if (productIdVsProduct[productIdentity.productId] == null) {
+                    val subProducts = ownerClient.getShopProductDetails(
+                        ownerId,
+                        shopId,
+                        productIdentity.productId
+                    )
+                    if (subProducts != null) {
+                        val product = Product2(
+                            id = productIdentity.productId,
+                            name = productIdentity.productName,
+                            company = productIdentity.companyName,
+                            subProducts = subProducts
+                        )
+                        productIdVsProduct[productIdentity.productId] = product
+                    }
+                }
+                withContext(Dispatchers.Main) {
+                    _selectedProduct.value = productIdVsProduct[productIdentity.productId]
+                }
             }
         }
 
-    suspend fun updateSelectedWorker(workerId: Long?) =
-        withContext(viewModelScope.coroutineContext) {
-            _selectedShopWorker.value =
-                if (workerId != null) shopIdVsWorkers[_currentShopIdForWorkers.value]?.find { it.id == workerId } else null
-        }
-
-    fun setCurrentShopIdForWorkers(shopId: Long) {
-        viewModelScope.launch { _currentShopIdForWorkers.value = shopId }
+    fun updateSelectedProduct(productId: Long?) {
+        _selectedProduct.value = if (productId != null) productIdVsProduct[productId] else null
     }
 
-    suspend fun addShopWorker(worker: Worker): Boolean =
+    suspend fun addShopSubProduct(
+        shopId: Long,
+        productId: Long,
+        request: AddSubProductsForShopRequest
+    ): String =
         withContext(Dispatchers.IO) {
-            ifNotNull(ownerId.value, _currentShopIdForWorkers.value) { ownerId, shopId ->
-                val addedWorker =
-                    ownerClient.addShopWorker(ownerId, worker) ?: return@ifNotNull false
-                val newWorkerList = shopIdVsWorkers[shopId]?.toMutableList() ?: mutableListOf()
-                newWorkerList.add(addedWorker)
-                shopIdVsWorkers[shopId] = newWorkerList
-                return@ifNotNull true
+            ownerId.value?.let { ownerId ->
+                val responseData =
+                    ownerClient.addShopSubProduct(ownerId, shopId, productId, request)
+                if (responseData != null) {
+                    if (responseData.addedSubProducts?.isNotEmpty() == true) {
+                        val existingProduct = productIdVsProduct[productId]
+                        val updatedProduct = existingProduct?.copy(
+                            subProducts = (existingProduct.subProducts + responseData.addedSubProducts)
+                        )
+                        if (updatedProduct != null) {
+                            productIdVsProduct[productId] = updatedProduct
+                            withContext(Dispatchers.Main) {
+                                _selectedProduct.value = updatedProduct
+                            }
+                        }
+                    }
+                    return@let responseData.message
+                }
+                "Unable to add this variant"
+            } ?: "Unable to add this variant"
+        }
+
+    suspend fun deleteShopSubProduct(
+        shopId: Long,
+        productId: Long,
+        shopSubProductId: Long
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            ownerId.value?.let { ownerId ->
+                val success = ownerClient.deleteShopSubProduct(ownerId, shopId, shopSubProductId)
+                if (success) {
+                    val existingProduct = productIdVsProduct[productId]
+                    if (existingProduct != null) {
+                        val newList =
+                            existingProduct.subProducts.filterNot { it.id == shopSubProductId }
+                        val updatedProduct = existingProduct.copy(subProducts = newList)
+                        productIdVsProduct[productId] = updatedProduct
+                        withContext(Dispatchers.Main) {
+                            _selectedProduct.value = updatedProduct
+                        }
+                    }
+                }
+                return@withContext success
             } ?: false
         }
 
-    suspend fun updateShopWorker(worker: Worker): Boolean =
+
+    suspend fun addProductSellingUnit(
+        shopId: Long,
+        productId: Long,
+        shopSubProductId: Long,
+        request: SellingUnitRequest
+    ): Boolean = withContext(Dispatchers.IO) {
+        ownerId.value?.let { ownerId ->
+            val addedUnit =
+                ownerClient.addProductSellingUnit(ownerId, shopId, shopSubProductId, request)
+            if (addedUnit != null) {
+                val existingProduct = productIdVsProduct[productId]
+                if (existingProduct != null) {
+                    val updatedSubProducts = existingProduct.subProducts.map { sub ->
+                        if (sub.id == shopSubProductId) {
+                            sub.copy(sellingUnits = sub.sellingUnits + addedUnit)
+                        } else sub
+                    }
+                    val updatedProduct = existingProduct.copy(subProducts = updatedSubProducts)
+                    productIdVsProduct[productId] = updatedProduct
+                    withContext(Dispatchers.Main) {
+                        _selectedProduct.value = updatedProduct
+                    }
+                    return@let true
+                }
+            }
+            return@let false
+            } ?: false
+    }
+
+    suspend fun updateProductSellingUnit(
+        shopId: Long,
+        productId: Long,
+        shopSubProductId: Long,
+        sellingUnitId: Long,
+        request: SellingUnitUpdate
+    ): Boolean = withContext(Dispatchers.IO) {
+        ownerId.value?.let { ownerId ->
+            val updatedUnit = ownerClient.updateProductSellingUnit(
+                ownerId,
+                shopId,
+                shopSubProductId,
+                sellingUnitId,
+                request
+            )
+            if (updatedUnit != null) {
+                val existingProduct = productIdVsProduct[productId]
+                if (existingProduct != null) {
+                    val updatedSubProducts = existingProduct.subProducts.map { sub ->
+                        if (sub.id == shopSubProductId) {
+                            sub.copy(sellingUnits = sub.sellingUnits.map { if (it.id == sellingUnitId) updatedUnit else it })
+                        } else sub
+                    }
+                    val updatedProduct = existingProduct.copy(subProducts = updatedSubProducts)
+                    productIdVsProduct[productId] = updatedProduct
+                    withContext(Dispatchers.Main) {
+                        _selectedProduct.value = updatedProduct
+                    }
+                }
+                return@let true
+            }
+            false
+        } ?: false
+    }
+
+    suspend fun deleteProductSellingUnit(
+        shopId: Long,
+        productId: Long,
+        shopSubProductId: Long,
+        sellingUnitId: Long
+    ): Boolean =
         withContext(Dispatchers.IO) {
-            ifNotNull(ownerId.value, _currentShopIdForWorkers.value) { ownerId, shopId ->
-                val updatedWorker =
-                    ownerClient.updateShopWorker(ownerId, worker) ?: return@ifNotNull false
-                val oldWorkerList = shopIdVsWorkers[shopId] ?: mutableListOf()
-                val newWorkerList = oldWorkerList.filterNot { it.id == worker.id }.toMutableList()
-                newWorkerList.add(updatedWorker)
-                shopIdVsWorkers[shopId] = newWorkerList
-                return@ifNotNull true
+            ownerId.value?.let { ownerId ->
+                val success = ownerClient.deleteProductSellingUnit(
+                    ownerId,
+                    shopId,
+                    shopSubProductId,
+                    sellingUnitId
+                )
+                if (success) {
+                    val existingProduct = productIdVsProduct[productId]
+                    if (existingProduct != null) {
+                        val updatedSubProducts = existingProduct.subProducts.map { sub ->
+                            if (sub.id == shopSubProductId) {
+                                sub.copy(sellingUnits = sub.sellingUnits.filterNot { it.id == sellingUnitId })
+                            } else sub
+                        }
+                        val updatedProduct = existingProduct.copy(subProducts = updatedSubProducts)
+                        productIdVsProduct[productId] = updatedProduct
+                        withContext(Dispatchers.Main) {
+                            _selectedProduct.value = updatedProduct
+                        }
+                    }
+                }
+                return@withContext success
             } ?: false
         }
 
-    suspend fun deleteShopWorker(workerId: Long): Boolean =
-        withContext(Dispatchers.IO) {
-            ifNotNull(ownerId.value, _currentShopIdForWorkers.value) { ownerId, shopId ->
-                val oldWorkerList = shopIdVsWorkers[shopId] ?: mutableListOf()
-                val workerExists = _selectedShopWorker.value != null
-                if (!workerExists) return@ifNotNull false
+    suspend fun getShopWorkers(shopId: Long): List<Worker> = withContext(Dispatchers.IO) {
+        ownerId.value?.let { ownerId ->
+            return@withContext shopIdVsWorkers[shopId] ?: run {
+                val response =
+                    ownerClient.getShopWorkers(ownerId, shopId) ?: return@run emptyList<Worker>()
+                shopIdVsWorkers[response.shopId] = response.workerList.toMutableList()
+                response.workerList
+            }
+        } ?: emptyList()
+    }
 
-                ownerClient.deleteShopWorker(ownerId, WorkerDeleteRequest(workerId, shopId))
-                    ?: return@ifNotNull false
+    fun updateSelectedWorker(workerId: Long?) {
+        _selectedShopWorker.value =
+            if (workerId != null) shopIdVsWorkers[_currentShopIdForWorkers.value]?.find { it.id == workerId } else null
+    }
 
-                val newWorkerList = oldWorkerList.filterNot { it.id == workerId }.toMutableList()
-                shopIdVsWorkers[shopId] = newWorkerList
+    fun setCurrentShopIdForWorkers(shopId: Long) {
+        _currentShopIdForWorkers.value = shopId
+    }
 
-                return@ifNotNull true
-            } ?: false
-        }
+    suspend fun addShopWorker(worker: Worker): Boolean = withContext(Dispatchers.IO) {
+        ifNotNull(ownerId.value, _currentShopIdForWorkers.value) { ownerId, shopId ->
+            val added = ownerClient.addShopWorker(ownerId, worker) ?: return@ifNotNull false
+            val list = shopIdVsWorkers[shopId] ?: mutableListOf()
+            list.add(added); shopIdVsWorkers[shopId] = list
+            true
+        } ?: false
+    }
+
+    suspend fun updateShopWorker(worker: Worker): Boolean = withContext(Dispatchers.IO) {
+        ifNotNull(ownerId.value, _currentShopIdForWorkers.value) { ownerId, shopId ->
+            val updated = ownerClient.updateShopWorker(ownerId, worker) ?: return@ifNotNull false
+            _selectedShopWorker.value = updated
+            val list = shopIdVsWorkers[shopId] ?: mutableListOf()
+            val index = list.indexOfFirst { it.id == worker.id }
+            if (index != -1) {
+                list[index] = updated; shopIdVsWorkers[shopId] = list; return@ifNotNull true
+            }
+            false
+        } ?: false
+    }
+
+    suspend fun deleteShopWorker(workerId: Long): Boolean = withContext(Dispatchers.IO) {
+        ifNotNull(ownerId.value, _currentShopIdForWorkers.value) { ownerId, shopId ->
+            val success =
+                ownerClient.deleteShopWorker(ownerId, WorkerDeleteRequest(workerId, shopId)) != null
+            if (success) {
+                shopIdVsWorkers[shopId]?.removeIf { it.id == workerId }
+            }
+            return@ifNotNull success
+        } ?: false
+    }
 
     private inline fun <T1, T2, R> ifNotNull(a: T1?, b: T2?, block: (a: T1, b: T2) -> R): R? {
         return if (a != null && b != null) block(a, b) else null
     }
-
 }
 
 @RequiresApi(Build.VERSION_CODES.O)

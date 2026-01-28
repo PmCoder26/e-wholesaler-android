@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -56,7 +55,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelStoreOwner
@@ -66,9 +64,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.e_wholesaler.main.users.owner.dtos.AddProductForShopRequest
+import com.example.e_wholesaler.main.users.owner.dtos.AddSubProductsForShopRequest
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
-import com.example.e_wholesaler.main.users.owner.dtos.Product
+import com.example.e_wholesaler.main.users.owner.dtos.ProductIdentity
+import com.example.e_wholesaler.main.users.owner.dtos.SellingUnitRequest
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
+import com.example.e_wholesaler.main.users.owner.dtos.SubProductRequest
 import com.example.e_wholesaler.main.users.owner.dtos.Worker
 import com.example.e_wholesaler.main.users.owner.dtos.hasDifferentData
 import com.example.e_wholesaler.main.users.owner.dtos.hasNoBlankField
@@ -98,7 +100,6 @@ fun getViewModelStoreOwner() = LocalActivity.current as ViewModelStoreOwner
 
 @Composable
 fun getIsPreview() = LocalInspectionMode.current
-
 
 @RequiresApi(Build.VERSION_CODES.O)
 @SuppressLint("ContextCastToActivity", "ProduceStateDoesNotAssignValue", "UnrememberedMutableState")
@@ -224,91 +225,137 @@ fun OwnerScreen() {
 
             ShopProductsScreen(
                 shops = shopsState.shops,
-                initialSelectedShop = shopsState.shops.firstOrNull(),
+                initialSelectedShop = shopProductsState.currentShop,
                 products = shopProductsState.products,
                 onBackClicked = { navCon.popBackStack() },
-                onShopSelected = { ownerViewModel.getShopProducts(it) },
+                onShopSelected = { scope.launch { ownerViewModel.getShopProducts(it) } },
                 onAddProductClicked = { navCon.navigate("AddProductScreen") },
                 onFilterChange = { ownerViewModel.updateProductSortType(it) },
-                onInfoButtonClick = { clickedProduct -> navCon.navigate("ProductDetailsScreen/${clickedProduct.name}") }
-            )
-        }
-
-        composable(
-            route = "ProductDetailsScreen/{productName}",
-            arguments = listOf(
-                navArgument("productName") { type = NavType.StringType }
-            )
-        ) {
-            val productName = it.arguments?.getString("productName") ?: ""
-            var trigger by remember {
-                mutableIntStateOf(0)
-            }
-            val selectedProduct by produceState(
-                initialValue = Product(),
-                key1 = productName,
-                key2 = trigger
-            ) {
-                value = ownerViewModel.getProductByName(productName).copy()
-            }
-
-            ProductDetailsScreen(
-                product = selectedProduct,
-                onBackClicked = { navCon.popBackStack() },
-                onEditSubProductConfirm = { subProduct ->
+                onInfoButtonClick = { clickedProduct ->
                     scope.launch {
-                        val hasUpdatedSubProduct =
-                            ownerViewModel.updateShopSubProduct(selectedProduct.name, subProduct)
-                        val message =
-                            if (hasUpdatedSubProduct) "Product variant updated successfully" else "Failed to update product variant"
-                        showToast(context, message)
-                        if (hasUpdatedSubProduct) trigger++
-                    }
-                },
-                onAddSubProductConfirm = { subProduct ->
-                    scope.launch {
-                        val hasAddedSubProduct =
-                            ownerViewModel.addShopSubProduct(selectedProduct.name, subProduct)
-                        val message =
-                            if (hasAddedSubProduct) "Product variant added successfully" else "Failed to add product variant"
-                        showToast(context, message)
-                        if (hasAddedSubProduct) trigger++
-                    }
-                },
-                onDeleteSubProductConfirm = { subProduct ->
-                    scope.launch {
-                        val hasRemoved =
-                            ownerViewModel.removeShopSubProduct(selectedProduct.name, subProduct)
-                        val message =
-                            if (hasRemoved) "Product removed successfully" else "Failed to remove product"
-                        showToast(context, message)
-                        if (hasRemoved) trigger++
-                    }
-                },
-                onDeleteProductConfirm = { product ->
-                    scope.launch {
-                        val hasRemoved = ownerViewModel.removeProduct(product)
-                        val message =
-                            if (hasRemoved) "Product removed successfully" else "Failed to remove product"
-                        showToast(context, message)
-                        navCon.popBackStack()
+                        ownerViewModel.getShopProductDetails(
+                            shopProductsState.shopId,
+                            clickedProduct
+                        )
+                        ownerViewModel.updateSelectedProduct(clickedProduct.productId)
+                        navCon.navigate("ProductDetailsScreen")
                     }
                 }
             )
         }
 
+        composable(route = "ProductDetailsScreen") {
+            val shopProductsState by ownerViewModel.shopProductsState.collectAsState()
+            val shopId = shopProductsState.shopId
+
+            val product by ownerViewModel.selectedProduct.collectAsState()
+
+            product?.let { p ->
+                ProductDetailsScreen(
+                    product = ProductIdentity(p.id ?: -1L, p.name, p.company),
+                    subProducts = p.subProducts,
+                    onBackClicked = {
+                        scope.launch {
+                            ownerViewModel.updateSelectedProduct(null)
+                        }
+                        navCon.popBackStack()
+                    },
+                    onAddSubProductConfirm = { subProductToAdd ->
+                        scope.launch {
+                            val request = AddSubProductsForShopRequest(
+                                subProducts = listOf(
+                                    SubProductRequest(
+                                        mrp = subProductToAdd.mrp,
+                                        sellingUnits = subProductToAdd.sellingUnits.map { unit ->
+                                            SellingUnitRequest(
+                                                unit.unitType,
+                                                unit.packets,
+                                                unit.sellingPrice
+                                            )
+                                        }
+                                    )
+                                )
+                            )
+                            val message =
+                                ownerViewModel.addShopSubProduct(shopId, p.id ?: -1, request)
+                            showToast(context, message)
+                        }
+                    },
+                    onUpdateSellingUnitConfirm = { variant, unit, updates ->
+                        scope.launch {
+                            val success = ownerViewModel.updateProductSellingUnit(
+                                shopId, p.id ?: -1, variant.id ?: -1L, unit.id ?: -1L, updates
+                            )
+                            if (success) showToast(context, "Selling unit updated successfully")
+                        }
+                    },
+                    onDeleteSubProductConfirm = { variant ->
+                        scope.launch {
+                            val deleted = ownerViewModel.deleteShopSubProduct(
+                                shopId,
+                                p.id ?: -1,
+                                variant.id ?: -1L
+                            )
+                            if (deleted) showToast(context, "Variant deleted successfully")
+                        }
+                    },
+                    onDeleteSellingUnitConfirm = { variant, unit ->
+                        scope.launch {
+                            val deleted = ownerViewModel.deleteProductSellingUnit(
+                                shopId, p.id ?: -1, variant.id ?: -1L, unit.id ?: -1L
+                            )
+                            if (deleted) showToast(context, "Selling unit deleted successfully")
+                        }
+                    },
+                    onDeleteProductConfirm = { productIdentity ->
+                        scope.launch {
+                            val deleted = ownerViewModel.deleteProduct(productIdentity.productId)
+                            if (deleted) {
+                                showToast(context, "Product removed successfully")
+                                navCon.popBackStack()
+                            }
+                        }
+                    },
+                    onAddSellingUnitConfirm = { subProduct, sellingUnitRequest ->
+                        scope.launch {
+                            val hasUnitAdded = ownerViewModel.addProductSellingUnit(
+                                shopId, product?.id ?: -1, subProduct.id ?: -1, sellingUnitRequest
+                            )
+                            if (hasUnitAdded) showToast(context, "Selling unit added successfully")
+                        }
+                    }
+                )
+            }
+        }
+
         composable("AddProductScreen") {
+            val state by ownerViewModel.shopProductsState.collectAsState()
+
             AddProductScreen(
                 onBackClicked = { navCon.popBackStack() },
-                onSaveProduct = { product ->
+                onSaveProduct = { name, company, subProducts ->
                     scope.launch {
-                        val hasAddedProduct = ownerViewModel.addProduct(product)
+                        val request = AddProductForShopRequest(
+                            productName = name,
+                            company = company,
+                            subProducts = subProducts.map { sub ->
+                                SubProductRequest(
+                                    mrp = sub.mrp,
+                                    sellingUnits = sub.sellingUnits.map { unit ->
+                                        SellingUnitRequest(
+                                            unit.unitType,
+                                            unit.packets,
+                                            unit.sellingPrice
+                                        )
+                                    }
+                                )
+                            }
+                        )
+                        val hasAddedProduct = ownerViewModel.addProduct(state.shopId, request)
                         val message =
-                            if (hasAddedProduct) "Product added successfully" else "Failed to add product or product already exists"
+                            if (hasAddedProduct) "Product added successfully" else "Failed to add product"
                         showToast(context, message)
-                        if (hasAddedProduct) {
-                            navCon.popBackStack()
-                        }
+                        if (hasAddedProduct) navCon.popBackStack()
                     }
                 }
             )
@@ -353,7 +400,7 @@ fun OwnerScreen() {
                     scope.launch {
                         val hasWorkerDeleted = ownerViewModel.deleteShopWorker(worker?.id ?: -1)
                         val message =
-                            if (hasWorkerDeleted) "Worker deleted successfully" else "Unable to delete the worker or no such worker exists"
+                            if (hasWorkerDeleted) "Worker deleted successfully" else "Unable to delete the worker"
                         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                         ownerViewModel.updateSelectedWorker(null)
                         navCon.popBackStack()
@@ -362,67 +409,45 @@ fun OwnerScreen() {
             )
         }
 
-        // Composable to add a new worker.
         composable(route = "WorkerAddUpdateScreen_add") {
             val shopId = ownerViewModel.currentShopIdForWorkers.collectAsState().value ?: -1
-
             WorkerAddUpdateScreen(
                 worker = null,
                 shopId = shopId,
                 onBackClicked = { navCon.popBackStack() },
                 onSaveClicked = {
                     scope.launch {
-                        val hasWorkerAdded = ownerViewModel.addShopWorker(it)
-                        val message =
-                            if (hasWorkerAdded) "Worker added successfully" else "Failed to add new worker"
-                        showToast(context, message)
-                        if (hasWorkerAdded) navCon.popBackStack()
+                        if (ownerViewModel.addShopWorker(it)) navCon.popBackStack()
                     }
                 }
             )
         }
 
-        // Composable to update worker details.
         composable(route = "WorkerAddUpdateScreen_update") {
             val shopId = ownerViewModel.currentShopIdForWorkers.collectAsState().value ?: -1
             val worker by ownerViewModel.selectedShopWorker.collectAsState()
-
             WorkerAddUpdateScreen(
                 worker = worker,
                 shopId = shopId,
                 onBackClicked = { navCon.popBackStack() },
                 onSaveClicked = {
                     scope.launch {
-                        val hasWorkerUpdated = ownerViewModel.updateShopWorker(it)
-                        val message =
-                            if (hasWorkerUpdated) "Worker details updated successfully" else "Failed to update details"
-                        showToast(context, message)
-                        if (hasWorkerUpdated) navCon.popBackStack()
+                        if (ownerViewModel.updateShopWorker(it)) navCon.popBackStack()
                     }
                 }
             )
         }
-
     }
 }
 
-
 @RequiresApi(Build.VERSION_CODES.O)
-@Preview(showBackground = true)
-@Composable
-fun OwnerHomeScreenPreview() {
-    OwnerHomeScreen(rememberNavController(), {}, "null", HomeScreenDetails(0, 0, 0, 0.0))
-}
-
-@RequiresApi(Build.VERSION_CODES.O)
-@SuppressLint("ContextCastToActivity")
 @Composable
 fun OwnerHomeScreen(
     navController: NavHostController,
-    refreshStats: () -> Unit, ownerName: String,
+    refreshStats: () -> Unit,
+    ownerName: String,
     homeScreenDetails: HomeScreenDetails?
 ) {
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -438,16 +463,12 @@ fun OwnerHomeScreen(
                     style = TextStyle(
                         fontWeight = FontWeight.Bold,
                         fontSize = 28.sp,
-                        color = Color(0xFF007BFF) // Blue color for branding
-                    ),
+                        color = Color(0xFF007BFF)
+                    )
                 )
-                IconButton(
-                    onClick = {
-                        navController.navigate("OwnerInfoScreen")
-                    },
-                ) {
+                IconButton(onClick = { navController.navigate("OwnerInfoScreen") }) {
                     Icon(
-                        imageVector = Icons.Default.AccountCircle, // Replace with actual icon
+                        imageVector = Icons.Default.AccountCircle,
                         contentDescription = "Profile",
                         modifier = Modifier.size(32.dp)
                     )
@@ -456,17 +477,13 @@ fun OwnerHomeScreen(
         },
         bottomBar = { BottomNavigationBar(navController) }
     ) { innerPadding ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            // Greeting Section
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-            ){
+            Box(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Welcome Back, $ownerName",
                     style = MaterialTheme.typography.headlineSmall,
@@ -480,32 +497,24 @@ fun OwnerHomeScreen(
                 }
             }
             Text(
-                text = "Thursday, March 14, 2024",
+                text = "Today's Status",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray
             )
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            val navigationViewModel = if (!getIsPreview()) {
-                koinViewModel<NavigationViewModel>(
-                    viewModelStoreOwner = getViewModelStoreOwner()
-                )
-            } else NullNavigationViewModel()
-            val ownerViewModel = if (!getIsPreview()) {
-                koinViewModel<OwnerViewModel>(
-                    viewModelStoreOwner = getViewModelStoreOwner()
-                )
-            } else NullOwnerViewModel()
-            // Stats Grid
+            val navigationViewModel =
+                if (!getIsPreview()) koinViewModel<NavigationViewModel>(viewModelStoreOwner = getViewModelStoreOwner()) else NullNavigationViewModel()
+            val ownerViewModel =
+                if (!getIsPreview()) koinViewModel<OwnerViewModel>(viewModelStoreOwner = getViewModelStoreOwner()) else NullOwnerViewModel()
+
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-
-                items (getOwnerStats(homeScreenDetails)) { stat ->
+                items(getOwnerStats(homeScreenDetails)) { stat ->
                     StatCard(stat, navigationViewModel, ownerViewModel)
                 }
             }
@@ -513,30 +522,9 @@ fun OwnerHomeScreen(
     }
 }
 
-// Stats Grid Data Model
-data class OwnerStat(
-    val title: String,
-    val value: String,
-    val isHighlighted: Boolean = false,
-    val extraInfo: String? = null
-)
-
-// Dummy Data
-fun getOwnerStats(homeScreenDetails: HomeScreenDetails?): List<OwnerStat> =  listOf(
-    OwnerStat("Daily Revenue", "Rs. ${homeScreenDetails?.salesAmount.toString()}", isHighlighted = true),
-    OwnerStat("Active Orders", homeScreenDetails?.creatingOrderCount.toString()),
-    OwnerStat("Total Shops", homeScreenDetails?.shopCount.toString()),
-    OwnerStat("Available Workers", homeScreenDetails?.workerCount.toString())
-)
-
-// Stat Card UI
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun StatCard(
-    stat: OwnerStat,
-    viewModel: NavigationViewModel?,
-    ownerViewModel: OwnerViewModel?
-) {
+fun StatCard(stat: OwnerStat, viewModel: NavigationViewModel?, ownerViewModel: OwnerViewModel?) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -549,24 +537,14 @@ fun StatCard(
                         navController?.navigate("RevenueScreen")
                     }
 
-                    "Active Orders" -> TODO()
-                    "Total Shops" -> {
-                        navController?.navigate("ShopsScreen")
-                    }
-
-                    "Available Workers" -> TODO()
+                    "Total Shops" -> navController?.navigate("ShopsScreen")
                 }
             },
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (stat.isHighlighted) Color(0xFF007BFF) else Color.White
-        )
+        colors = CardDefaults.cardColors(containerColor = if (stat.isHighlighted) Color(0xFF007BFF) else Color.White)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.Center
-        ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.Center) {
             Text(
                 text = stat.title,
                 style = MaterialTheme.typography.bodyMedium,
@@ -578,29 +556,13 @@ fun StatCard(
                 fontWeight = FontWeight.Bold,
                 color = if (stat.isHighlighted) Color.White else Color.Black
             )
-
-            // Extra Info (Workers Status)
-            stat.extraInfo?.let {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Person, // Replace with actual icon
-                        contentDescription = "Workers",
-                        tint = Color(0xFFFF9800), // Orange color
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(it, color = Color(0xFFFF9800), style = MaterialTheme.typography.bodySmall)
-                }
-            }
         }
     }
 }
 
-// Bottom Navigation Bar
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
     var selectedIndex by remember { mutableIntStateOf(0) }
-
     val items = listOf("Home", "Products", "Workers", "Orders")
     val icons = listOf(
         Icons.Default.Home,
@@ -616,7 +578,7 @@ fun BottomNavigationBar(navController: NavHostController) {
                 onClick = {
                     selectedIndex = index
                     when (item) {
-                        "Home" -> navController.navigate("HomeScreen")
+                        "Home" -> navController.navigate("OwnerHomeScreen")
                         "Products" -> navController.navigate("ShopProductsScreen")
                         "Workers" -> navController.navigate("WorkersScreen")
                         "Orders" -> navController.navigate("OrdersScreen")
@@ -629,6 +591,14 @@ fun BottomNavigationBar(navController: NavHostController) {
     }
 }
 
+data class OwnerStat(val title: String, val value: String, val isHighlighted: Boolean = false)
+
+fun getOwnerStats(details: HomeScreenDetails?): List<OwnerStat> = listOf(
+    OwnerStat("Daily Revenue", "₹${details?.salesAmount ?: 0.0}", isHighlighted = true),
+    OwnerStat("Active Orders", "${details?.creatingOrderCount ?: 0}"),
+    OwnerStat("Total Shops", "${details?.shopCount ?: 0}"),
+    OwnerStat("Workers", "${details?.workerCount ?: 0}")
+)
 
 fun showToast(context: Context, message: String) {
     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()

@@ -8,18 +8,21 @@ import com.example.e_wholesaler.ktor_client.RequestType.DELETE
 import com.example.e_wholesaler.ktor_client.RequestType.GET
 import com.example.e_wholesaler.ktor_client.RequestType.POST
 import com.example.e_wholesaler.ktor_client.RequestType.PUT
+import com.example.e_wholesaler.main.users.owner.dtos.AddProductForShopRequest
+import com.example.e_wholesaler.main.users.owner.dtos.AddProductForShopResponse
+import com.example.e_wholesaler.main.users.owner.dtos.AddSubProductsForShopRequest
+import com.example.e_wholesaler.main.users.owner.dtos.AddSubProductsForShopResponse
 import com.example.e_wholesaler.main.users.owner.dtos.DailyShopRevenue
 import com.example.e_wholesaler.main.users.owner.dtos.HomeScreenDetails
 import com.example.e_wholesaler.main.users.owner.dtos.Message
 import com.example.e_wholesaler.main.users.owner.dtos.OwnerDetails
-import com.example.e_wholesaler.main.users.owner.dtos.Product
-import com.example.e_wholesaler.main.users.owner.dtos.ProductRemoveRequest
+import com.example.e_wholesaler.main.users.owner.dtos.ProductIdentity
+import com.example.e_wholesaler.main.users.owner.dtos.SellingUnit
+import com.example.e_wholesaler.main.users.owner.dtos.SellingUnitRequest
+import com.example.e_wholesaler.main.users.owner.dtos.SellingUnitUpdate
 import com.example.e_wholesaler.main.users.owner.dtos.Shop
 import com.example.e_wholesaler.main.users.owner.dtos.ShopAndWorkers
-import com.example.e_wholesaler.main.users.owner.dtos.SubProductAddRequest
-import com.example.e_wholesaler.main.users.owner.dtos.SubProductAddResponse
-import com.example.e_wholesaler.main.users.owner.dtos.SubProductRemoveRequest
-import com.example.e_wholesaler.main.users.owner.dtos.SubProductUpdateRequest
+import com.example.e_wholesaler.main.users.owner.dtos.SubProduct2
 import com.example.e_wholesaler.main.users.owner.dtos.Worker
 import com.example.e_wholesaler.main.users.owner.dtos.WorkerDeleteRequest
 import io.ktor.client.HttpClient
@@ -65,27 +68,95 @@ class OwnerClient(private val httpClient: HttpClient, private val context: Conte
         return makeApiCall(ownerId, POST, "/shop", newShop)
     }
 
-    suspend fun getShopProducts(ownerId: Long, shopId: Long): MutableList<Product>? {
-        return makeApiCall<MutableList<Product>, Any>(ownerId, GET, "/shop/$shopId/products", null)
+    suspend fun getShopProducts(ownerId: Long, shopId: Long): List<ProductIdentity>? {
+        return makeApiCall<List<ProductIdentity>, Any>(ownerId, GET, "/shop/$shopId/products", null)
     }
 
-    suspend fun removeShopSubProduct(ownerId: Long, requestDTO: SubProductRemoveRequest): Message? {
-        return makeApiCall(ownerId, DELETE, "/shop/products/shop-sub-product", requestDTO)
+    suspend fun addProduct(
+        ownerId: Long,
+        shopId: Long,
+        request: AddProductForShopRequest
+    ): AddProductForShopResponse? {
+        return makeApiCall(ownerId, POST, "/shop/$shopId/products", request)
+    }
+
+    suspend fun deleteProduct(ownerId: Long, shopId: Long, productId: Long): Boolean {
+        return makeApiCall<Boolean, Any>(ownerId, DELETE, "/shop/$shopId/products/$productId", null)
+            ?: false
     }
 
     suspend fun addShopSubProduct(
         ownerId: Long,
-        requestDTO: SubProductAddRequest
-    ): SubProductAddResponse? {
-        return makeApiCall(ownerId, POST, "/shop/products/shop-sub-product", requestDTO)
+        shopId: Long,
+        productId: Long,
+        request: AddSubProductsForShopRequest
+    ): AddSubProductsForShopResponse? {
+        return makeApiCall(ownerId, POST, "/shop/$shopId/products/$productId/sub-products", request)
     }
 
-    suspend fun updateShopSubProduct(ownerId: Long, requestDTO: SubProductUpdateRequest): Message? {
-        return makeApiCall(ownerId, PUT, "/shop/products/shop-sub-product", requestDTO)
+    suspend fun getShopProductDetails(
+        ownerId: Long,
+        shopId: Long,
+        productId: Long
+    ): List<SubProduct2>? {
+        return makeApiCall<List<SubProduct2>, Any>(
+            ownerId,
+            GET,
+            "/shop/$shopId/products/$productId/sub-products",
+            null
+        )
     }
 
-    suspend fun removeProduct(ownerId: Long, requestDTO: ProductRemoveRequest): Message? {
-        return makeApiCall(ownerId, DELETE, "/shop/products/product", requestDTO)
+    suspend fun deleteShopSubProduct(ownerId: Long, shopId: Long, shopSubProductId: Long): Boolean {
+        return makeApiCall<Boolean, Any>(
+            ownerId,
+            DELETE,
+            "/shop/$shopId/sub-products/$shopSubProductId",
+            null
+        ) ?: false
+    }
+
+    suspend fun addProductSellingUnit(
+        ownerId: Long,
+        shopId: Long,
+        shopSubProductId: Long,
+        request: SellingUnitRequest
+    ): SellingUnit? {
+        return makeApiCall(
+            ownerId,
+            POST,
+            "/shop/$shopId/sub-products/$shopSubProductId/selling-units",
+            request
+        )
+    }
+
+    suspend fun updateProductSellingUnit(
+        ownerId: Long,
+        shopId: Long,
+        shopSubProductId: Long,
+        sellingUnitId: Long,
+        request: SellingUnitUpdate
+    ): SellingUnit? {
+        return makeApiCall(
+            ownerId,
+            PUT,
+            "/shop/$shopId/sub-products/$shopSubProductId/selling-units/$sellingUnitId",
+            request
+        )
+    }
+
+    suspend fun deleteProductSellingUnit(
+        ownerId: Long,
+        shopId: Long,
+        shopSubProductId: Long,
+        sellingUnitId: Long
+    ): Boolean {
+        return makeApiCall<Boolean, Any>(
+            ownerId,
+            DELETE,
+            "/shop/$shopId/sub-products/$shopSubProductId/selling-units/$sellingUnitId",
+            null
+        ) ?: false
     }
 
     suspend fun getShopWorkers(ownerId: Long, shopId: Long): ShopAndWorkers? {
@@ -103,7 +174,6 @@ class OwnerClient(private val httpClient: HttpClient, private val context: Conte
     suspend fun deleteShopWorker(ownerId: Long, requestDTO: WorkerDeleteRequest): Message? {
         return makeApiCall(ownerId, DELETE, "/shops/worker", requestDTO)
     }
-
 
     private suspend inline fun <reified ResponseType, reified RequestBodyType> makeApiCall(
         ownerId: Long, requestType: RequestType, url: String, requestBody: RequestBodyType?
@@ -136,9 +206,14 @@ class OwnerClient(private val httpClient: HttpClient, private val context: Conte
                     requestBody?.let { setBody(it) }
                 }
             }
+
+            if (apiResponse.status == HttpStatusCode.NoContent) {
+                return if (Boolean::class == ResponseType::class) true as ResponseType else null
+            }
+            
             val body = apiResponse.body<ApiResponse<ResponseType>>()
 
-            if (apiResponse.status == HttpStatusCode.OK) return body.data
+            if (apiResponse.status == HttpStatusCode.OK || apiResponse.status == HttpStatusCode.Created) return body.data
             else {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
@@ -154,4 +229,5 @@ class OwnerClient(private val httpClient: HttpClient, private val context: Conte
             return null
         }
     }
+
 }

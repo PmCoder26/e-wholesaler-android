@@ -1,5 +1,6 @@
 package com.example.e_wholesaler.main.users.owner.ui.products
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,11 +23,17 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -41,23 +47,32 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.e_wholesaler.main.users.owner.dtos.Product
-import com.example.e_wholesaler.main.users.owner.dtos.SubProduct
+import com.example.e_wholesaler.main.users.owner.dtos.SellingUnit
+import com.example.e_wholesaler.main.users.owner.dtos.SubProduct2
+import com.example.e_wholesaler.main.users.owner.dtos.UnitType
 import com.example.e_wholesaler.main.users.owner.ui.shops.CardBackgroundWhite
 import com.example.e_wholesaler.main.users.owner.ui.shops.IconColorWhite
 import com.example.e_wholesaler.main.users.owner.ui.shops.TopBarBlue
+import com.example.e_wholesaler.main.users.owner.ui.workers.BackgroundScreen
+import com.example.e_wholesaler.main.users.owner.ui.workers.DeleteRed
 import java.util.UUID
+
+private data class SellingUnitFormState(
+    val id: UUID = UUID.randomUUID(),
+    var unitType: UnitType = UnitType.PIECE,
+    var packets: String = "",
+    var sellingPrice: String = ""
+)
 
 private data class SubProductFormState(
     val id: UUID = UUID.randomUUID(),
     var mrp: String = "",
-    var sellingPrice: String = "",
-    var quantity: String = "",
-    var stock: String = ""
+    var sellingUnits: List<SellingUnitFormState> = listOf(SellingUnitFormState())
 )
 
 @Preview(showBackground = true)
@@ -65,7 +80,7 @@ private data class SubProductFormState(
 fun AddProductScreenPreview() {
     AddProductScreen(
         onBackClicked = {},
-        onSaveProduct = { _ -> }
+        onSaveProduct = { _, _, _ -> }
     )
 }
 
@@ -73,22 +88,23 @@ fun AddProductScreenPreview() {
 @Composable
 fun AddProductScreen(
     onBackClicked: () -> Unit,
-    onSaveProduct: (Product) -> Unit
+    onSaveProduct: (name: String, company: String, subProducts: List<SubProduct2>) -> Unit
 ) {
     var productName by remember { mutableStateOf("") }
-    var productCategory by remember { mutableStateOf("") }
     var productCompany by remember { mutableStateOf("") }
-    // Start with one sub-product form for better UX
-    var subProductForms by remember { mutableStateOf(emptyList<SubProductFormState>()) }
+    var subProductForms by remember { mutableStateOf(listOf(SubProductFormState())) }
 
     val isFormValid by remember {
         derivedStateOf {
             productName.isNotBlank() &&
-            productCategory.isNotBlank() &&
             productCompany.isNotBlank() &&
             subProductForms.isNotEmpty() &&
-            subProductForms.all {
-                it.mrp.isNotBlank() && it.sellingPrice.isNotBlank() && it.quantity.isNotBlank() && it.stock.isNotBlank()
+                    subProductForms.all { variant ->
+                        variant.mrp.isNotBlank() &&
+                                variant.sellingUnits.isNotEmpty() &&
+                                variant.sellingUnits.all { unit ->
+                                    unit.packets.isNotBlank() && unit.sellingPrice.isNotBlank()
+                                }
             }
         }
     }
@@ -96,7 +112,7 @@ fun AddProductScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Product", color = IconColorWhite) },
+                title = { Text("Add Wholesale Product", color = IconColorWhite) },
                 navigationIcon = {
                     IconButton(onClick = onBackClicked) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = IconColorWhite)
@@ -107,34 +123,37 @@ fun AddProductScreen(
         },
         containerColor = BackgroundScreen,
         bottomBar = {
-                Button(
-                    onClick = {
-                        val finalSubProducts = subProductForms.map {
-                            SubProduct(
-                                mrp = it.mrp.toDoubleOrNull() ?: 0.0,
-                                sellingPrice = it.sellingPrice.toDoubleOrNull() ?: 0.0,
-                                quantity = it.quantity.toIntOrNull() ?: 0,
-                                stock = it.stock.toLongOrNull() ?: 0L
-                            )
-                        }
-                        val newProduct = Product(
-                            name = productName,
-                            category = productCategory,
-                            company = productCompany,
-                            shopSubProducts = finalSubProducts
+            Button(
+                onClick = {
+                    val finalSubProducts = subProductForms.map { variant ->
+                        SubProduct2(
+                            mrp = variant.mrp.toDoubleOrNull() ?: 0.0,
+                            sellingUnits = variant.sellingUnits.map { unit ->
+                                SellingUnit(
+                                    unitType = unit.unitType,
+                                    packets = unit.packets.toIntOrNull() ?: 0,
+                                    sellingPrice = unit.sellingPrice.toDoubleOrNull() ?: 0.0
+                                )
+                            }
                         )
-                        onSaveProduct(newProduct)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = TopBarBlue),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = isFormValid
-                ) {
-                    Text("Add Product", color = Color.White, fontSize = 16.sp)
-                }
+                    }
+                    onSaveProduct(productName, productCompany, finalSubProducts)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = TopBarBlue),
+                shape = RoundedCornerShape(12.dp),
+                enabled = isFormValid
+            ) {
+                Text(
+                    "Save Product",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     ) { paddingValues ->
         LazyColumn(
@@ -146,24 +165,59 @@ fun AddProductScreen(
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
             item {
-                Text("Product Information", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 4.dp))
+                Text(
+                    "Basic Details",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = CardBackgroundWhite),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedTextField(value = productName, onValueChange = { productName = it }, label = { Text("Product Name") }, modifier = Modifier.fillMaxWidth())
-                        OutlinedTextField(value = productCategory, onValueChange = { productCategory = it }, label = { Text("Category") }, modifier = Modifier.fillMaxWidth())
-                        OutlinedTextField(value = productCompany, onValueChange = { productCompany = it }, label = { Text("Company / Brand") }, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(
+                            value = productName,
+                            onValueChange = { productName = it },
+                            label = { Text("Product Name") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        OutlinedTextField(
+                            value = productCompany,
+                            onValueChange = { productCompany = it },
+                            label = { Text("Company / Brand") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
                     }
                 }
             }
 
             item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Product Variants", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Pricing Variants (MRP)",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(onClick = {
+                        subProductForms = subProductForms + SubProductFormState()
+                    }) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add Variant",
+                            tint = TopBarBlue
+                        )
+                    }
+                }
             }
 
             itemsIndexed(subProductForms, key = { _, item -> item.id }) { index, formState ->
@@ -174,34 +228,19 @@ fun AddProductScreen(
                             subProductForms.toMutableList().also { it[index] = newState }
                     },
                     onRemove = {
-                        if (subProductForms.isNotEmpty()) {
-                            subProductForms = subProductForms.filterNot { it.id == formState.id }
-                        }
+                        subProductForms = subProductForms.filterNot { it.id == formState.id }
                     },
-                    canBeRemoved = subProductForms.isNotEmpty(),
+                    canBeRemoved = subProductForms.size > 1,
                     variantNumber = index + 1
                 )
             }
 
-            item {
-                Button(
-                    onClick = { subProductForms = subProductForms + SubProductFormState() },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = TopBarBlue.copy(alpha = 0.1f),
-                        contentColor = TopBarBlue
-                    )
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Variant")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (subProductForms.isEmpty()) "Add Variant" else "Add Another Variant")
-                }
-            }
+            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SubProductInputCard(
     formState: SubProductFormState,
@@ -222,48 +261,158 @@ private fun SubProductInputCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Variant #$variantNumber", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Variant #$variantNumber",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TopBarBlue,
+                    fontWeight = FontWeight.Bold
+                )
                 if (canBeRemoved) {
-                    IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
+                    IconButton(onClick = onRemove) {
                         Icon(Icons.Default.Delete, contentDescription = "Remove Variant", tint = DeleteRed)
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = formState.mrp,
-                        onValueChange = { onStateChange(formState.copy(mrp = it)) },
-                        label = { Text("MRP") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = formState.sellingPrice,
-                        onValueChange = { onStateChange(formState.copy(sellingPrice = it)) },
-                        label = { Text("Selling Price") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
+
+            OutlinedTextField(
+                value = formState.mrp,
+                onValueChange = { onStateChange(formState.copy(mrp = it)) },
+                label = { Text("MRP (Base Price)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                prefix = { Text("₹") }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "Selling Units",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(
+                    onClick = {
+                        onStateChange(formState.copy(sellingUnits = formState.sellingUnits + SellingUnitFormState()))
+                    },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Add Selling Unit",
+                        tint = TopBarBlue
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = formState.quantity,
-                        onValueChange = { onStateChange(formState.copy(quantity = it)) },
-                        label = { Text("Quantity") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = formState.stock,
-                        onValueChange = { onStateChange(formState.copy(stock = it)) },
-                        label = { Text("Stock") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
+            }
+
+            formState.sellingUnits.forEachIndexed { index, unit ->
+                SellingUnitInputRow(
+                    unit = unit,
+                    onUnitChange = { updatedUnit ->
+                        val newList =
+                            formState.sellingUnits.toMutableList().also { it[index] = updatedUnit }
+                        onStateChange(formState.copy(sellingUnits = newList))
+                    },
+                    onRemove = {
+                        val newList = formState.sellingUnits.filterIndexed { i, _ -> i != index }
+                        onStateChange(formState.copy(sellingUnits = newList))
+                    },
+                    canRemove = formState.sellingUnits.size > 1
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SellingUnitInputRow(
+    unit: SellingUnitFormState,
+    onUnitChange: (SellingUnitFormState) -> Unit,
+    onRemove: () -> Unit,
+    canRemove: Boolean
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .background(Color(0xFFF8F9FA), RoundedCornerShape(8.dp))
+            .padding(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded },
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedTextField(
+                    value = unit.unitType.name,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Unit") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = TopBarBlue)
+                )
+                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    UnitType.entries.forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text(type.name) },
+                            onClick = {
+                                onUnitChange(unit.copy(unitType = type))
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            OutlinedTextField(
+                value = unit.packets,
+                onValueChange = { onUnitChange(unit.copy(packets = it)) },
+                label = { Text("Packets") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(0.8f),
+                shape = RoundedCornerShape(8.dp)
+            )
+
+            if (canRemove) {
+                IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Remove Unit",
+                        tint = DeleteRed.copy(alpha = 0.7f)
                     )
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = unit.sellingPrice,
+            onValueChange = { onUnitChange(unit.copy(sellingPrice = it)) },
+            label = { Text("Selling Price for this unit") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            prefix = { Text("₹") }
+        )
     }
 }
